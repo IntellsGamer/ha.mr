@@ -1,0 +1,20 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "split": "held-out even IDs where id % 101 = 0"
+  },
+  "candidates": {
+    "semantic": "canonical uppercase percent escapes, long decimals, homogeneous-case hex, and UUIDs",
+    "opaque": "semantic transform plus canonical Base64URL and Base62 opaque-token packing"
+  },
+  "totals": {
+    "urls": 4780,
+    "existing_symbols": 169609,
+    "best_symbols": 169143,
+    "winner_existing": 4640,
+    "winner_semantic_dict": 138,
+    "new_wins": 140,
+    "saved_symbols": 466,
+    "winner_opaque_dict": 2
+  }
+}

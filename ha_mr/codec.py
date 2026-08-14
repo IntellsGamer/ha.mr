@@ -13,6 +13,10 @@ import zlib
 from urllib.parse import parse_qsl, quote, urlsplit
 
 from .codec_dictionary import STATIC_URL_DICTIONARY
+from .semantic import inverse as semantic_inverse
+from .semantic import transform as semantic_transform
+from .host_transform import inverse as host_inverse
+from .host_transform import transform as host_transform
 from .codec_data import (
     DOMAIN_ENCODE,
     OUTPUT_ALPHABET_ASCII,
@@ -445,10 +449,13 @@ def infer_alphabet(payload: str, *, qr: bool = False) -> Sequence[str]:
     return EMOJI_ALPHABET if any(character not in ASCII_ALPHABET for character in payload) else ASCII_ALPHABET
 
 
-# V1 is distinguished from V0 by the low bit of the packed integer. V0 always
-# ends in zero; V1 packs an odd value. Its byte frame is:
-#   version (1) | method (0=raw DEFLATE, 1=static-dictionary DEFLATE) | stream
+# Adaptive frames are distinguished from V0 by the low bit of the packed
+# integer. V0 always ends in zero; adaptive frames pack an odd value. Their
+# byte frames are: version (1 or 2) | method (0=raw, 1=static dictionary) | stream.
+# Version 2 applies the lossless semantic transform before DEFLATE.
 _V1_VERSION = 1
+_V2_VERSION = 2
+_V3_VERSION = 3
 _V1_METHOD_RAW = 0
 _V1_METHOD_STATIC = 1
 _MAX_V1_URL_BYTES = 65_536
@@ -512,8 +519,8 @@ def _v1_transport(payload: str, alphabet: Sequence[str]) -> tuple[str, Sequence[
     return payload, alphabet
 
 
-def _v1_pack(stream: bytes, method: int, alphabet: Sequence[str]) -> str:
-    frame = bytes((_V1_VERSION, method)) + stream
+def _pack_adaptive_frame(version: int, stream: bytes, method: int, alphabet: Sequence[str]) -> str:
+    frame = bytes((version, method)) + stream
     # The leading one byte preserves zero bytes during integer conversion.
     value = int.from_bytes(b"\x01" + frame, "big")
     transport = EMOJI_V1_ALPHABET if _uses_legacy_emoji_alphabet(alphabet) else alphabet
@@ -521,26 +528,43 @@ def _v1_pack(stream: bytes, method: int, alphabet: Sequence[str]) -> str:
     return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
 
 
-def _v1_unpack(payload: str, alphabet: Sequence[str]) -> str:
+def _adaptive_unpack(payload: str, alphabet: Sequence[str]) -> str:
     body, transport = _v1_transport(payload, alphabet)
     number = _string_to_number(body, transport)
     if not number & 1:
-        raise CodecError("Payload is not a V1 frame.")
+        raise CodecError("Payload is not an adaptive frame.")
     value = number >> 1
     raw = value.to_bytes((value.bit_length() + 7) // 8, "big")
-    if len(raw) < 4 or raw[0] != 1 or raw[1] != _V1_VERSION:
-        raise CodecError("Invalid V1 frame header.")
-    method = raw[2]
+    if len(raw) < 4 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION}:
+        raise CodecError("Invalid adaptive frame header.")
+    version, method = raw[1], raw[2]
     try:
-        return _inflate(raw[3:], method).decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise CodecError("V1 payload does not contain a UTF-8 URL.") from exc
+        output = _inflate(raw[3:], method)
+        if version == _V2_VERSION:
+            output = semantic_inverse(output)
+        elif version == _V3_VERSION:
+            output = host_inverse(output)
+        return output.decode("utf-8")
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise CodecError("Adaptive payload does not contain a valid UTF-8 URL.") from exc
 
 
 def is_v1_payload(payload: str, alphabet: Sequence[str]) -> bool:
-    """Return whether a transport payload belongs to the adaptive V1 format."""
+    """Return whether a transport payload belongs to any adaptive frame."""
     body, transport = _v1_transport(payload, alphabet)
     return bool(_string_to_number(body, transport) & 1)
+
+
+def adaptive_payload_version(payload: str, alphabet: Sequence[str]) -> int:
+    """Return 0 for legacy V0, otherwise the self-contained adaptive version."""
+    body, transport = _v1_transport(payload, alphabet)
+    number = _string_to_number(body, transport)
+    if not number & 1:
+        return 0
+    raw = (number >> 1).to_bytes(((number >> 1).bit_length() + 7) // 8, "big")
+    if len(raw) < 3 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION}:
+        raise CodecError("Invalid adaptive frame header.")
+    return raw[1]
 
 
 def payload_symbol_count(payload: str, alphabet: Sequence[str]) -> int:
@@ -590,14 +614,31 @@ def compress_adaptive(input_url: str, alphabet: Sequence[str] = ASCII_ALPHABET) 
 
     encoded = normalised.encode("utf-8")
     for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
-        payload = _v1_pack(_deflate(encoded, method), method, alphabet)
+        payload = _pack_adaptive_frame(_V1_VERSION, _deflate(encoded, method), method, alphabet)
         candidates.append((payload, payload_symbol_count(payload, alphabet)))
+
+    # V2 is a semantic byte transform followed by the same independently
+    # decodable raw/static-DEFLATE choices. It wins only when its full frame is
+    # shorter than V0 and V1, so short familiar links retain their V0 payloads.
+    semantic = semantic_transform(encoded, opaque_tokens=True)
+    if semantic != encoded:
+        for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
+            payload = _pack_adaptive_frame(_V2_VERSION, _deflate(semantic, method), method, alphabet)
+            candidates.append((payload, payload_symbol_count(payload, alphabet)))
+
+    # V3 adds a frozen host index only when it changes the semantic stream.
+    # The complete V3 frame still competes on exact emitted size.
+    host_semantic = host_transform(encoded)
+    if host_semantic != semantic:
+        for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
+            payload = _pack_adaptive_frame(_V3_VERSION, _deflate(host_semantic, method), method, alphabet)
+            candidates.append((payload, payload_symbol_count(payload, alphabet)))
     return min(candidates, key=lambda item: item[1])[0]
 
 
 def decompress_adaptive(payload: str, alphabet: Sequence[str] = ASCII_ALPHABET) -> str:
-    """Decode either the legacy V0 format or the adaptive V1 framing."""
-    return _v1_unpack(payload, alphabet) if is_v1_payload(payload, alphabet) else decompress(payload, alphabet)
+    """Decode legacy V0 or an adaptive V1/V2 frame."""
+    return _adaptive_unpack(payload, alphabet) if is_v1_payload(payload, alphabet) else decompress(payload, alphabet)
 
 
 def adaptive_alphabet(name: str) -> Sequence[str]:

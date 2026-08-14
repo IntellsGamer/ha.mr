@@ -26,7 +26,7 @@ from ha_mr.codec import (  # noqa: E402
     compress,
     compress_adaptive,
     decompress_adaptive,
-    is_v1_payload,
+    adaptive_payload_version,
     payload_symbol_count,
 )
 
@@ -77,9 +77,9 @@ def main() -> None:
                 for stats in (overall, group):
                     stats[f"{name}_unsupported"] += 1
                 continue
-            version = "v1" if is_v1_payload(payload, alphabet) else "v0"
-            if version == "v1" and decoded != url:
-                raise AssertionError("V1 failed exact round trip")
+            version = f"v{adaptive_payload_version(payload, alphabet)}"
+            if version != "v0" and decoded != url:
+                raise AssertionError("Adaptive frame failed exact round trip")
             for stats in (overall, group):
                 stats[f"{name}_symbols"] += payload_symbol_count(payload, alphabet)
                 stats[f"{name}_{version}_wins"] += 1
@@ -96,8 +96,9 @@ def main() -> None:
                 stats["legacy_ascii_symbols"] += len(legacy)
                 stats["adaptive_ascii_symbols_on_legacy_supported"] += adaptive_ascii_symbols
                 stats["adaptive_ascii_saved_symbols_on_legacy_supported"] += len(legacy) - adaptive_ascii_symbols
-                if is_v1_payload(adaptive_ascii, ASCII_ALPHABET):
-                    stats["adaptive_ascii_v1_wins_on_legacy_supported"] += 1
+                version = adaptive_payload_version(adaptive_ascii, ASCII_ALPHABET)
+                if version:
+                    stats[f"adaptive_ascii_v{version}_wins_on_legacy_supported"] += 1
 
     elapsed = time.perf_counter() - started
     report = {

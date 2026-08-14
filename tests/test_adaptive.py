@@ -5,10 +5,16 @@ import unittest
 from fastapi.testclient import TestClient
 
 from app import app
+from ha_mr.host_transform import inverse as host_inverse
+from ha_mr.host_transform import transform as host_transform
+from ha_mr.semantic import inverse as semantic_inverse
+from ha_mr.semantic import transform as semantic_transform
+
 from ha_mr.codec import (
     ASCII_ALPHABET,
     CJK_ALPHABET,
     EMOJI_ALPHABET,
+    adaptive_payload_version,
     compress_adaptive,
     decompress_adaptive,
     infer_alphabet,
@@ -35,6 +41,30 @@ class AdaptiveCodecTests(unittest.TestCase):
         payload = compress_adaptive(LONG_TAIL_URL, ASCII_ALPHABET)
         self.assertTrue(is_v1_payload(payload, ASCII_ALPHABET))
         self.assertEqual(decompress_adaptive(payload, ASCII_ALPHABET), LONG_TAIL_URL)
+
+    def test_semantic_transform_preserves_complex_url_bytes(self) -> None:
+        url = (
+            "https://example.com/redirect/12345678901234567890?next=https%3A%2F%2Fnews.example%2F"
+            "a%20b&id=1ae03060-3f06-4a5c-9ac6-b5c1b4a62664&token=QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo"
+        )
+        transformed = semantic_transform(url.encode("utf-8"), opaque_tokens=True)
+        self.assertLess(len(transformed), len(url.encode("utf-8")))
+        self.assertEqual(semantic_inverse(transformed).decode("utf-8"), url)
+
+    def test_frozen_host_transform_preserves_reddit_shared_link_shape(self) -> None:
+        url = "https://www.reddit.com/r/python/comments/12345678901234567890/example?next=https%3A%2F%2Fexample.com%2Fdocs"
+        transformed = host_transform(url.encode("utf-8"))
+        self.assertLess(len(transformed), len(url.encode("utf-8")))
+        self.assertEqual(host_inverse(transformed).decode("utf-8"), url)
+
+    def test_v2_semantic_frame_beats_v1_for_opaque_shared_link_shape(self) -> None:
+        url = (
+            "https://example.com/redirect/12345678901234567890?next=https%3A%2F%2Fnews.example%2F"
+            "a%20b&id=1ae03060-3f06-4a5c-9ac6-b5c1b4a62664&token=QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo"
+        )
+        payload = compress_adaptive(url, ASCII_ALPHABET)
+        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 2)
+        self.assertEqual(decompress_adaptive(payload, ASCII_ALPHABET), url)
 
     def test_v1_emoji_transport_is_prefix_safe(self) -> None:
         payload = compress_adaptive(LONG_TAIL_URL, EMOJI_ALPHABET)

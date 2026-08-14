@@ -52,3 +52,20 @@ These modes optimise **visible-symbol count**, not guaranteed wire-byte count af
 ## Reference
 
 [1] [Patrick Smyth, *reddit_links_dataset*](https://github.com/smythp/reddit_links_dataset)
+
+## V2 and V3 semantic candidates
+
+A second design pass examined residual structure left after V0/V1 on the held-out Reddit links. The corpus contained canonical percent escapes, long decimal runs, hexadecimal identifiers, UUIDs, and opaque Base64URL/Base62 values. V2 transforms only these recognisable forms, recording a compact marker plus length and case information before DEFLATE. It can therefore restore the original UTF-8 bytes exactly without a corpus lookup.
+
+V3 adds a frozen 255-host codebook learned from the same odd-ID training partition. The scheme remains literal and a matching lower-case host is replaced by a one-byte index. The decoder reinserts the host from the committed table before reversing V2. The static URL dictionary and host codebook are runtime constants; the Reddit database is not required at runtime.
+
+A Brotli experiment was also performed against raw and semantic inputs. It won only three held-out links and saved nine visible ASCII symbols in total, which was insufficient to justify a new binary dependency or another frame type. It is retained as an experiment report, not part of the encoder.
+
+| Candidate | Scope | Selection rule |
+| --- | --- | --- |
+| V0 | Original URL grammar codec | Preserve when it produces the shortest payload |
+| V1 | Raw and static-dictionary DEFLATE | Use for long-tail or V0-unsupported input when shorter |
+| V2 | Semantic byte transform plus DEFLATE | Use only when the fully framed payload is shorter |
+| V3 | V2 plus frozen-host index plus DEFLATE | Use only when the fully framed payload is shorter |
+
+The encoder compares the final transport symbol count, including all format headers and emoji marker overhead. It does not assume that a pre-transform is beneficial merely because its input is shorter.

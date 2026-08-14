@@ -33,9 +33,11 @@ uvicorn asgi:app --host 0.0.0.0 --port 5000
 
 Then open `http://127.0.0.1:5000`.
 
-## Adaptive V1 codec
+## Adaptive V1–V3 codec
 
-For the selected output transport, the encoder emits the shortest valid candidate among the original structural V0 codec, V1 raw DEFLATE, and V1 static-dictionary DEFLATE. V0 remains the best representation for most familiar shared links; V1 handles long, opaque, nested, query-heavy, and V0-unsupported URLs.
+For the selected output transport, the encoder emits the shortest valid candidate among the original structural V0 codec, V1 raw/static-dictionary DEFLATE, V2 semantic-DEFLATE, and V3 host-codebook semantic-DEFLATE. V0 remains the best representation for most familiar shared links; the later frames handle long, opaque, nested, query-heavy, and V0-unsupported URLs.
+
+V2 makes a byte-level, fully reversible pass before DEFLATE. It packs canonical `%HH` escapes, long isolated decimal identifiers, homogeneous-case hexadecimal identifiers, UUIDs, canonical Base64URL values, and Base62 opaque tokens only when the representation is shorter. V3 additionally replaces a host from a frozen 255-entry Reddit-trained codebook with a one-byte index. Every transform stores its own marker, length, and case information; decoding remains self-contained and does not need the Reddit database.
 
 The V1 static dictionary is trained reproducibly from the **odd-ID half** of the one-million-row Reddit outbound-links sample. It learns only repeated safe link structure—protocol fragments, hosts, short path prefixes, and query keys—and excludes fragments, query values, and one-off identifiers. Evaluation uses a deterministic subset of the disjoint even-ID half. The runtime contains only the frozen dictionary, never the source database.
 
@@ -46,7 +48,7 @@ The V1 static dictionary is trained reproducibly from the **odd-ID half** of the
 | Japanese/CJK | Densest visible text transport | Often percent-encoded by strict URL-only channels |
 | QR | QR-compatible alphanumeric transport | Restricted alphabet by design |
 
-V0 payloads stay valid. V1 is self-identifying through packed-number framing; emoji V1 additionally uses a dedicated marker before its prefix-safe body.
+V0 payloads stay valid. Adaptive frames V1, V2, and V3 are self-identifying through packed-number framing; emoji adaptive frames additionally use a dedicated marker before their prefix-safe body.
 
 ## API
 

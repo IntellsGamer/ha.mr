@@ -1,0 +1,159 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "split": "held-out even IDs where id % 101 = 0"
+  },
+  "totals": {
+    "urls": 4780,
+    "url_bytes": 278354,
+    "percent_escapes": 731,
+    "percent_escape_raw_bytes": 2193,
+    "percent_ascii_escapes": 602,
+    "decimal_runs": 456,
+    "decimal_digits": 4502,
+    "decimal_theoretical_saved_bytes": 1787,
+    "hex_runs": 190,
+    "hex_digits": 3614,
+    "hex_theoretical_saved_bytes": 1406,
+    "uuid_runs": 22,
+    "uuid_theoretical_saved_bytes": 418,
+    "urls_with_query": 1119,
+    "query_keys": 1543,
+    "repeated_query_keys_within_url": 0
+  },
+  "top_percent_escaped_bytes": [
+    [
+      "2F",
+      254
+    ],
+    [
+      "20",
+      162
+    ],
+    [
+      "3A",
+      46
+    ],
+    [
+      "D0",
+      38
+    ],
+    [
+      "28",
+      21
+    ],
+    [
+      "29",
+      21
+    ],
+    [
+      "3D",
+      16
+    ],
+    [
+      "26",
+      13
+    ],
+    [
+      "27",
+      13
+    ],
+    [
+      "D1",
+      13
+    ],
+    [
+      "22",
+      12
+    ],
+    [
+      "2C",
+      10
+    ],
+    [
+      "C3",
+      9
+    ],
+    [
+      "BE",
+      8
+    ],
+    [
+      "23",
+      7
+    ],
+    [
+      "3F",
+      7
+    ],
+    [
+      "25",
+      6
+    ],
+    [
+      "0A",
+      6
+    ],
+    [
+      "A9",
+      6
+    ],
+    [
+      "B9",
+      6
+    ],
+    [
+      "80",
+      5
+    ],
+    [
+      "2B",
+      5
+    ],
+    [
+      "B8",
+      4
+    ],
+    [
+      "B5",
+      4
+    ],
+    [
+      "BD",
+      4
+    ],
+    [
+      "82",
+      4
+    ],
+    [
+      "B2",
+      4
+    ],
+    [
+      "E2",
+      3
+    ],
+    [
+      "BA",
+      3
+    ],
+    [
+      "93",
+      2
+    ],
+    [
+      "85",
+      2
+    ],
+    [
+      "B0",
+      2
+    ]
+  ],
+  "notes": {
+    "percent_transform": "ASCII %HH can be represented losslessly with one high-bit byte; non-ASCII raw bytes use an escape pair.",
+    "decimal_transform": "Long isolated decimal runs are candidates for length-prefixed base-10 integer encoding.",
+    "hex_transform": "Long isolated hexadecimal runs and UUIDs are candidates for length-prefixed binary packing."
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "training": "odd IDs",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "codebook": {
+    "hosts": 255,
+    "top_hosts": [
+      "www.reddit.com",
+      "www.youtube.com",
+      "en.wikipedia.org",
+      "i.imgur.com",
+      "np.reddit.com",
+      "imgur.com",
+      "pcpartpicker.com",
+      "gatherer.wizards.com",
+      "github.com",
+      "youtu.be",
+      "twitter.com",
+      "reddit.com",
+      "www.amazon.com",
+      "steamcommunity.com",
+      "www.google.com",
+      "magiccards.info",
+      "en.m.wikipedia.org",
+      "img.scryfall.com",
+      "www.np.reddit.com",
+      "myanimelist.net",
+      "www.instagram.com",
+      "discordapp.com",
+      "open.spotify.com",
+      "www.facebook.com",
+      "scryfall.com",
+      "soundcloud.com",
+      "web.archive.org",
+      "www.imdb.com",
+      "www.ncbi.nlm.nih.gov",
+      "api.scryfall.com"
+    ]
+  },
+  "totals": {
+    "urls": 4780,
+    "existing_symbols": 169200,
+    "best_symbols": 169141,
+    "winner_existing": 4765,
+    "winner_host_dict": 15,
+    "new_wins": 15,
+    "saved_symbols": 59
+  }
+}
