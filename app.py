@@ -10,12 +10,11 @@ import qrcode
 from flask import Flask, Response, jsonify, redirect, render_template, request
 
 from ha_mr.codec import (
-    ASCII_ALPHABET,
-    EMOJI_ALPHABET,
-    QR_ALPHABET,
     CodecError,
-    compress,
-    decompress,
+    QR_ALPHABET,
+    adaptive_alphabet,
+    compress_adaptive,
+    decompress_adaptive,
     infer_alphabet,
 )
 
@@ -47,14 +46,10 @@ def _make_qr_data_url(value: str, correction_level: int) -> str:
 
 
 def _decode_payload(payload: str, mode: str) -> str:
-    if mode not in {"auto", "ascii", "emoji", "qr"}:
-        raise CodecError("mode must be one of: auto, ascii, emoji, qr")
-    alphabet = infer_alphabet(payload, qr=mode == "qr") if mode == "auto" else {
-        "ascii": ASCII_ALPHABET,
-        "emoji": EMOJI_ALPHABET,
-        "qr": QR_ALPHABET,
-    }[mode]
-    return decompress(payload, alphabet)
+    if mode not in {"auto", "ascii", "emoji", "cjk", "qr"}:
+        raise CodecError("mode must be one of: auto, ascii, emoji, cjk, qr")
+    alphabet = infer_alphabet(payload, qr=mode == "qr") if mode == "auto" else adaptive_alphabet(mode)
+    return decompress_adaptive(payload, alphabet)
 
 
 @app.get("/")
@@ -68,12 +63,12 @@ def api_compress() -> Response:
     body = request.get_json(silent=True) or {}
     input_url = str(body.get("url", "")).strip()
     mode = body.get("mode", "ascii")
-    if mode not in {"ascii", "emoji", "qr"}:
-        return jsonify(error="mode must be one of: ascii, emoji, qr"), 400
+    if mode not in {"ascii", "emoji", "cjk", "qr"}:
+        return jsonify(error="mode must be one of: ascii, emoji, cjk, qr"), 400
 
-    alphabet = {"ascii": ASCII_ALPHABET, "emoji": EMOJI_ALPHABET, "qr": QR_ALPHABET}[mode]
+    alphabet = adaptive_alphabet(mode)
     try:
-        payload = compress(input_url, alphabet)
+        payload = compress_adaptive(input_url, alphabet)
     except CodecError as exc:
         return jsonify(error=str(exc)), 400
 
@@ -112,7 +107,7 @@ def api_qr() -> Response:
         correction_level = 1
 
     try:
-        payload = compress(input_url, QR_ALPHABET)
+        payload = compress_adaptive(input_url, QR_ALPHABET)
     except CodecError as exc:
         return jsonify(error=str(exc)), 400
 
@@ -129,7 +124,7 @@ def healthz() -> Response:
 def resolve_qr_payload(payload: str) -> Response:
     """Decode a QR-mode path payload and perform the destination redirect."""
     try:
-        destination = decompress(payload, QR_ALPHABET)
+        destination = decompress_adaptive(payload, QR_ALPHABET)
     except CodecError:
         return Response("Unknown ha.mr payload", status=404, mimetype="text/plain")
     return redirect(destination, code=302)

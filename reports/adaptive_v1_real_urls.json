@@ -1,0 +1,87 @@
+{
+  "dataset": {
+    "source": "/home/ubuntu/ha-mr-url-dataset/out.txt",
+    "selection": "Every twentieth URL from index zero; deterministic sample",
+    "sample_size": 5000
+  },
+  "overall": {
+    "ascii_symbols": 294182,
+    "ascii_v0_wins": 4638,
+    "urls": 5000,
+    "emoji_symbols": 167335,
+    "emoji_v0_wins": 4636,
+    "cjk_symbols": 157853,
+    "cjk_v0_wins": 4638,
+    "v0_ascii_symbols": 214335,
+    "ascii_v1_wins": 362,
+    "emoji_v1_wins": 364,
+    "cjk_v1_wins": 362,
+    "v0_unsupported": 360
+  },
+  "by_category": {
+    "deep-path": {
+      "ascii_symbols": 15989,
+      "ascii_v0_wins": 228,
+      "urls": 239,
+      "emoji_symbols": 8748,
+      "emoji_v0_wins": 227,
+      "cjk_symbols": 8575,
+      "cjk_v0_wins": 228,
+      "ascii_v1_wins": 11,
+      "emoji_v1_wins": 12,
+      "cjk_v1_wins": 11
+    },
+    "long": {
+      "ascii_symbols": 27325,
+      "ascii_v1_wins": 76,
+      "urls": 83,
+      "emoji_symbols": 17374,
+      "emoji_v1_wins": 77,
+      "cjk_symbols": 14582,
+      "cjk_v1_wins": 76,
+      "ascii_v0_wins": 7,
+      "emoji_v0_wins": 6,
+      "cjk_v0_wins": 7
+    },
+    "ordinary": {
+      "ascii_symbols": 173732,
+      "ascii_v0_wins": 4227,
+      "urls": 4248,
+      "emoji_symbols": 94154,
+      "emoji_v0_wins": 4226,
+      "cjk_symbols": 93487,
+      "cjk_v0_wins": 4227,
+      "ascii_v1_wins": 21,
+      "emoji_v1_wins": 22,
+      "cjk_v1_wins": 21
+    },
+    "query-heavy": {
+      "ascii_symbols": 77136,
+      "ascii_v1_wins": 254,
+      "urls": 430,
+      "emoji_symbols": 47059,
+      "emoji_v1_wins": 253,
+      "cjk_symbols": 41209,
+      "cjk_v1_wins": 254,
+      "ascii_v0_wins": 176,
+      "emoji_v0_wins": 177,
+      "cjk_v0_wins": 176
+    }
+  },
+  "largest_ascii_v1_improvements": [
+    {
+      "url": "https://play.google.com/store/apps/collection/cluster?clp=igM4ChkKEzcwODY2Mzk4OTAxNTM4MDIxMjcQCBgDEhkKEzcwODY2Mzk4OTAxNTM4MDIxMjcQCBgDGAA%3D:S:ANO1ljIffHc&gsr=CjuKAzgKGQoTNzA4NjYzOTg5MDE1MzgwMjEyNxAIGAMSGQoTNzA4NjYzOTg5MDE1MzgwMjEyNxAIGAMYAA%3D%3D:S:ANO1ljLiJ8A",
+      "v0_symbols": 231,
+      "adaptive_symbols": 213,
+      "saved_symbols": 18,
+      "category": "query-heavy"
+    },
+    {
+      "url": "https://apps.apple.com/us/app/%D9%82%D8%A7%D8%B1%D8%A6%D8%A9-%D8%A7%D9%84%D9%81%D9%86%D8%AC%D8%A7%D9%86-%D9%85%D8%AC%D8%A7%D9%86%D8%A7/id1480604848",
+      "v0_symbols": 114,
+      "adaptive_symbols": 108,
+      "saved_symbols": 6,
+      "category": "ordinary"
+    }
+  ]
+}

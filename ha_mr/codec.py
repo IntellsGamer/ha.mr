@@ -7,9 +7,12 @@ ASCII and QR payloads are interoperable with existing ha.mr links.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Mapping, Sequence
+import zlib
 from urllib.parse import parse_qsl, quote, urlsplit
 
+from .codec_dictionary import STATIC_URL_DICTIONARY
 from .codec_data import (
     DOMAIN_ENCODE,
     OUTPUT_ALPHABET_ASCII,
@@ -24,6 +27,13 @@ from .codec_data import (
 ASCII_ALPHABET = tuple(OUTPUT_ALPHABET_ASCII)
 QR_ALPHABET = tuple(OUTPUT_ALPHABET_QR)
 EMOJI_ALPHABET = tuple(OUTPUT_ALPHABET_EMOJI)
+# V0's rich multi-code-point emoji entries are retained for old links. V1 uses
+# a fixed single-code-point set so arbitrary adjacent digits are prefix-safe.
+EMOJI_V1_ALPHABET = tuple(chr(0x1F300 + offset) for offset in range(1024))
+EMOJI_V1_MARKER = "〄"  # Outside the V0 and V1 emoji digit alphabets.
+# One-code-point Japanese/CJK display transport: 4,096 digits (12 bits/digit).
+# It is opt-in because URI serialisers commonly percent-encode non-ASCII text.
+CJK_ALPHABET = tuple(chr(0x4E00 + offset) for offset in range(4096))
 
 TLD_DECODE = {code: value for value, code in TLD_ENCODE.items()}
 SLD_DECODE = {code: value for value, code in SLD_ENCODE.items()}
@@ -97,16 +107,46 @@ def _number_to_string(number: int, alphabet: Sequence[str]) -> str:
     return output
 
 
+@lru_cache(maxsize=8)
+def _reverse_transport_trie(alphabet: tuple[str, ...]) -> dict[str, object]:
+    """Build a reverse trie for O(symbol length) transport parsing."""
+    root: dict[str, object] = {}
+    for index, symbol in enumerate(alphabet):
+        node = root
+        for character in reversed(symbol):
+            node = node.setdefault(character, {})  # type: ignore[assignment]
+        node["\0"] = (index, len(symbol))
+    return root
+
+
+def _take_symbol_from_end(remaining: str, alphabet: Sequence[str]) -> tuple[int, int]:
+    trie = _reverse_transport_trie(tuple(alphabet))
+    node: dict[str, object] = trie
+    match: tuple[int, int] | None = None
+    for character in reversed(remaining):
+        child = node.get(character)
+        if not isinstance(child, dict):
+            break
+        node = child
+        terminal = node.get("\0")
+        # The original JavaScript uses Array.find(), so the first alphabet
+        # entry wins even when several symbols are valid suffixes. Preserve
+        # that ordering rule rather than preferring the longest match.
+        if isinstance(terminal, tuple) and (match is None or terminal[0] < match[0]):
+            match = terminal
+    if match is None:
+        raise CodecError(f"Invalid payload character: {remaining[-1]!r}")
+    return match
+
+
 def _string_to_number(value: str, alphabet: Sequence[str]) -> int:
     base = len(alphabet)
     number = 0
     remaining = value
     while remaining:
-        index = next((i for i, symbol in enumerate(alphabet) if remaining.endswith(symbol)), -1)
-        if index < 0:
-            raise CodecError(f"Invalid payload character: {remaining[-1]!r}")
+        index, length = _take_symbol_from_end(remaining, alphabet)
         number = number * base + index + 1
-        remaining = remaining[: -len(alphabet[index])]
+        remaining = remaining[:-length]
     return number
 
 
@@ -397,7 +437,178 @@ def decompress(payload: str, alphabet: Sequence[str] = ASCII_ALPHABET) -> str:
 
 
 def infer_alphabet(payload: str, *, qr: bool = False) -> Sequence[str]:
-    """Choose the original project’s payload alphabet from its transport form."""
+    """Choose the transport alphabet from a QR path or a text fragment."""
     if qr:
         return QR_ALPHABET
+    if payload and all(character in CJK_ALPHABET for character in payload):
+        return CJK_ALPHABET
     return EMOJI_ALPHABET if any(character not in ASCII_ALPHABET for character in payload) else ASCII_ALPHABET
+
+
+# V1 is distinguished from V0 by the low bit of the packed integer. V0 always
+# ends in zero; V1 packs an odd value. Its byte frame is:
+#   version (1) | method (0=raw DEFLATE, 1=static-dictionary DEFLATE) | stream
+_V1_VERSION = 1
+_V1_METHOD_RAW = 0
+_V1_METHOD_STATIC = 1
+_MAX_V1_URL_BYTES = 65_536
+
+
+def _symbol_count(value: str, alphabet: Sequence[str]) -> int:
+    """Count transport symbols rather than Unicode code points."""
+    count = 0
+    remaining = value
+    while remaining:
+        _index, length = _take_symbol_from_end(remaining, alphabet)
+        remaining = remaining[:-length]
+        count += 1
+    return count
+
+
+def _deflate(url_bytes: bytes, method: int) -> bytes:
+    if method == _V1_METHOD_RAW:
+        compressor = zlib.compressobj(level=9, method=zlib.DEFLATED, wbits=-15, memLevel=9)
+    elif method == _V1_METHOD_STATIC:
+        compressor = zlib.compressobj(
+            level=9,
+            method=zlib.DEFLATED,
+            wbits=-15,
+            memLevel=9,
+            zdict=STATIC_URL_DICTIONARY,
+        )
+    else:
+        raise CodecError("Unknown V1 compression method.")
+    return compressor.compress(url_bytes) + compressor.flush()
+
+
+def _inflate(stream: bytes, method: int) -> bytes:
+    try:
+        if method == _V1_METHOD_RAW:
+            decompressor = zlib.decompressobj(wbits=-15)
+        elif method == _V1_METHOD_STATIC:
+            decompressor = zlib.decompressobj(wbits=-15, zdict=STATIC_URL_DICTIONARY)
+        else:
+            raise CodecError("Unknown V1 compression method.")
+        output = decompressor.decompress(stream, _MAX_V1_URL_BYTES + 1)
+        if len(output) > _MAX_V1_URL_BYTES or decompressor.unconsumed_tail:
+            raise CodecError("V1 payload expands beyond the configured URL limit.")
+        output += decompressor.flush(_MAX_V1_URL_BYTES + 1 - len(output))
+    except zlib.error as exc:
+        raise CodecError("Invalid V1 compressed payload.") from exc
+    if not decompressor.eof or len(output) > _MAX_V1_URL_BYTES:
+        raise CodecError("Invalid or oversized V1 compressed payload.")
+    return output
+
+
+def _uses_legacy_emoji_alphabet(alphabet: Sequence[str]) -> bool:
+    return tuple(alphabet) == EMOJI_ALPHABET
+
+
+def _v1_transport(payload: str, alphabet: Sequence[str]) -> tuple[str, Sequence[str]]:
+    if payload.startswith(EMOJI_V1_MARKER):
+        if not _uses_legacy_emoji_alphabet(alphabet):
+            raise CodecError("Unexpected V1 emoji transport marker.")
+        return payload[len(EMOJI_V1_MARKER):], EMOJI_V1_ALPHABET
+    return payload, alphabet
+
+
+def _v1_pack(stream: bytes, method: int, alphabet: Sequence[str]) -> str:
+    frame = bytes((_V1_VERSION, method)) + stream
+    # The leading one byte preserves zero bytes during integer conversion.
+    value = int.from_bytes(b"\x01" + frame, "big")
+    transport = EMOJI_V1_ALPHABET if _uses_legacy_emoji_alphabet(alphabet) else alphabet
+    payload = _number_to_string((value << 1) | 1, transport)
+    return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
+
+
+def _v1_unpack(payload: str, alphabet: Sequence[str]) -> str:
+    body, transport = _v1_transport(payload, alphabet)
+    number = _string_to_number(body, transport)
+    if not number & 1:
+        raise CodecError("Payload is not a V1 frame.")
+    value = number >> 1
+    raw = value.to_bytes((value.bit_length() + 7) // 8, "big")
+    if len(raw) < 4 or raw[0] != 1 or raw[1] != _V1_VERSION:
+        raise CodecError("Invalid V1 frame header.")
+    method = raw[2]
+    try:
+        return _inflate(raw[3:], method).decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise CodecError("V1 payload does not contain a UTF-8 URL.") from exc
+
+
+def is_v1_payload(payload: str, alphabet: Sequence[str]) -> bool:
+    """Return whether a transport payload belongs to the adaptive V1 format."""
+    body, transport = _v1_transport(payload, alphabet)
+    return bool(_string_to_number(body, transport) & 1)
+
+
+def payload_symbol_count(payload: str, alphabet: Sequence[str]) -> int:
+    """Count visible transport digits, including the V1 emoji format marker."""
+    if payload.startswith(EMOJI_V1_MARKER):
+        body, transport = _v1_transport(payload, alphabet)
+        return 1 + _symbol_count(body, transport)
+    try:
+        return _symbol_count(payload, alphabet)
+    except CodecError:
+        # The legacy multi-grapheme emoji list is not prefix-free. Fall back to
+        # code-point count only for V0 candidate scoring; V1 avoids this issue.
+        return len(payload)
+
+
+def compress_adaptive(input_url: str, alphabet: Sequence[str] = ASCII_ALPHABET) -> str:
+    """Emit the shortest of legacy V0, V1 raw, and V1 dictionary candidates.
+
+    V0 is deliberately retained as a candidate: its URL-specific structure is
+    much stronger than a generic compressor for common short web URLs. V1 fills
+    the long-tail gap for opaque, nested, and previously unsupported inputs.
+    """
+    normalised = input_url.strip()
+    if not normalised:
+        raise CodecError("A URL is required.")
+    # V1 accepts a wider long-tail set than the legacy hostname dictionary
+    # parser. It validates only the absolute HTTP(S) envelope and keeps the
+    # caller's original spelling for byte-exact reconstruction.
+    candidate = normalised if "://" in normalised else f"http://{normalised}"
+    try:
+        parsed = urlsplit(candidate)
+    except ValueError as exc:
+        raise CodecError("The URL cannot be parsed.") from exc
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise CodecError("Only absolute HTTP(S) URLs are supported.")
+    candidates: list[tuple[str, int]] = []
+    try:
+        legacy = compress(normalised, alphabet)
+        # The old rich emoji alphabet is not prefix-free for arbitrary long
+        # streams. Keep a V0 emoji candidate only if its legacy decoder can
+        # parse it; V1 emoji is always safe and otherwise takes over.
+        if _uses_legacy_emoji_alphabet(alphabet):
+            decompress(legacy, alphabet)
+        candidates.append((legacy, payload_symbol_count(legacy, alphabet)))
+    except (CodecError, ValueError):
+        pass
+
+    encoded = normalised.encode("utf-8")
+    for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
+        payload = _v1_pack(_deflate(encoded, method), method, alphabet)
+        candidates.append((payload, payload_symbol_count(payload, alphabet)))
+    return min(candidates, key=lambda item: item[1])[0]
+
+
+def decompress_adaptive(payload: str, alphabet: Sequence[str] = ASCII_ALPHABET) -> str:
+    """Decode either the legacy V0 format or the adaptive V1 framing."""
+    return _v1_unpack(payload, alphabet) if is_v1_payload(payload, alphabet) else decompress(payload, alphabet)
+
+
+def adaptive_alphabet(name: str) -> Sequence[str]:
+    """Resolve a named text transport without exposing QR-only settings."""
+    transports = {
+        "ascii": ASCII_ALPHABET,
+        "emoji": EMOJI_ALPHABET,
+        "cjk": CJK_ALPHABET,
+        "qr": QR_ALPHABET,
+    }
+    try:
+        return transports[name]
+    except KeyError as exc:
+        raise CodecError("mode must be one of: ascii, emoji, cjk, qr") from exc

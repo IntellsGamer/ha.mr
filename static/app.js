@@ -6,7 +6,7 @@
   const qrCodeImage = document.querySelector("#qrcode");
   const qrCodeCorrectionLevelContainer = document.querySelector("#qr-correct-level-container");
   const qrCodeCorrectionLevelElement = document.querySelector("#qr-correct-level");
-  const emojiSetting = document.querySelector("#settings-emoji");
+  const transportSelect = document.querySelector("#settings-transport");
   const qrSetting = document.querySelector("#settings-qr");
   const loader = document.querySelector("#loader");
   const content = document.querySelector("#content");
@@ -57,7 +57,7 @@
     }
 
     try {
-      const mode = emojiSetting.checked ? "emoji" : "ascii";
+      const mode = transportSelect.value;
       const textOutput = await api("/api/compress", { url: input, mode });
       if (version !== updateVersion) return;
 
@@ -124,7 +124,7 @@
     window.addEventListener("hashchange", () => { resolveFragment(); });
     if (resolveFragment()) return;
     inputLinkElement.addEventListener("input", updateOutput);
-    emojiSetting.addEventListener("change", updateOutput);
+    transportSelect.addEventListener("change", updateOutput);
     qrSetting.addEventListener("change", updateOutput);
     qrCodeCorrectionLevelElement.addEventListener("change", updateOutput);
     await updateOutput();

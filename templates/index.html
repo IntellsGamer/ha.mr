@@ -42,8 +42,12 @@
     </span>
 
     <span style="margin-top:20px">
-      <input type="checkbox" id="settings-emoji" name="settings-emoji" autocomplete="off">
-      <label for="settings-emoji"> Use emoji in text output</label><br>
+      <label for="settings-transport">Text output alphabet</label><br>
+      <select id="settings-transport" name="settings-transport" autocomplete="off">
+        <option value="ascii">ASCII (most compatible)</option>
+        <option value="emoji">Emoji (dense display)</option>
+        <option value="cjk">Japanese/CJK (highest density)</option>
+      </select><br>
     </span>
     <span>
       <input type="checkbox" id="settings-qr" name="settings-qr" autocomplete="off">

@@ -31,9 +31,17 @@ python app.py
 
 Then open `http://127.0.0.1:5000`.
 
+## Adaptive V1 codec
+
+The encoder now evaluates multiple reversible representations and emits the **shortest visible payload** for the selected transport. It keeps the original structural V0 codec as a candidate because it is exceptionally effective for common domains and short paths. It also adds V1 raw-DEFLATE and static-dictionary-DEFLATE candidates for long, nested, query-heavy, opaque, and legacy-unsupported URLs.
+
+Text output can use the following alphabets from the page selector or API. **ASCII** is the interoperable default. **Emoji** uses a prefix-safe one-code-point V1 transport; the existing rich emoji alphabet continues to decode older V0 links. **Japanese/CJK** uses 4,096 one-code-point digits for the densest visible text output, but strict URL serialisers will typically percent-encode it. QR uses its dedicated restricted alphabet and remains QR-compatible.
+
+Existing V0 payloads remain valid. V1 payloads are self-identifying through the packed-number framing; emoji V1 adds a dedicated display marker before its safe high-radix body. The detailed design and real-corpus experiment are in [`docs/adaptive_v1_design.md`](docs/adaptive_v1_design.md).
+
 ## API
 
-`POST /api/compress` accepts JSON with `url` and an optional `mode` of `ascii`, `emoji`, or `qr`.
+`POST /api/compress` accepts JSON with `url` and an optional `mode` of `ascii`, `emoji`, `cjk`, or `qr`.
 
 ```json
 {"url":"https://example.com/docs/guide?ref=ha#intro","mode":"qr"}
@@ -44,7 +52,7 @@ Then open `http://127.0.0.1:5000`.
 ## Test
 
 ```bash
-python3 -m unittest -v tests/test_app.py
+python3 -m unittest -v tests/test_app.py tests/test_adaptive.py
 ```
 
 The suite checks codec round trips, a payload captured from the original public deployment, QR-alphabet output, Flask APIs, server-side QR PNG generation, and redirect resolution.
@@ -55,7 +63,7 @@ If intentionally updating the retained upstream reference implementation, regene
 
 ```bash
 python3 tools/extract_codec_data.py
-python3 -m unittest -v tests/test_app.py
+python3 -m unittest -v tests/test_app.py tests/test_adaptive.py
 ```
 
 ## Deployment
