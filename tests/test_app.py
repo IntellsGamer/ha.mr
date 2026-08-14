@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import unittest
+
+import app as app_module
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -56,6 +58,39 @@ class ASGIApplicationTests(unittest.TestCase):
         self.assertIn("(read: \"hammer\")", response.text)
         self.assertIn('id="input-link"', response.text)
         self.assertIn("static/app.js", response.text)
+
+    def test_offline_worker_is_root_scoped_and_no_cache(self) -> None:
+        response = self.client.get("/offline_sw.js")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["service-worker-allowed"], "/")
+        self.assertEqual(response.headers["cache-control"], "no-cache")
+        self.assertIn("ha-mr-offline-", response.text)
+
+    def test_server_codec_rate_limiter_rejects_excess_burst(self) -> None:
+        original = (
+            app_module.SERVER_RATE_LIMIT_REQUESTS,
+            app_module.SERVER_RATE_LIMIT_BURST,
+            app_module.SERVER_RATE_LIMIT_REFILL_PER_SECOND,
+        )
+        try:
+            app_module.SERVER_RATE_LIMIT_REQUESTS = 2
+            app_module.SERVER_RATE_LIMIT_BURST = 2
+            app_module.SERVER_RATE_LIMIT_REFILL_PER_SECOND = 0.0001
+            app_module.SERVER_RATE_LIMIT_BUCKETS.clear()
+            body = {"payload": "O,QnpHuemsiV2e_BfyZNRqhI!", "mode": "auto"}
+            self.assertEqual(self.client.post("/api/decompress", json=body).status_code, 200)
+            self.assertEqual(self.client.post("/api/decompress", json=body).status_code, 200)
+            limited = self.client.post("/api/decompress", json=body)
+            self.assertEqual(limited.status_code, 429)
+            self.assertEqual(limited.headers["retry-after"], "10000")
+            self.assertEqual(limited.headers["x-ratelimit-limit"], "2")
+        finally:
+            (
+                app_module.SERVER_RATE_LIMIT_REQUESTS,
+                app_module.SERVER_RATE_LIMIT_BURST,
+                app_module.SERVER_RATE_LIMIT_REFILL_PER_SECOND,
+            ) = original
+            app_module.SERVER_RATE_LIMIT_BUCKETS.clear()
 
     def test_fragment_decoder_api_resolves_reference_payload(self) -> None:
         response = self.client.post(

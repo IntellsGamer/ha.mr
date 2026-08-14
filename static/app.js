@@ -14,10 +14,23 @@
   const qrSetting = document.querySelector("#settings-qr");
   const loader = document.querySelector("#loader");
   const content = document.querySelector("#content");
+  const codecBootstrap = document.querySelector("#codec-bootstrap");
+  const codecBootstrapMessage = document.querySelector("#codec-bootstrap-message");
+  const codecBootstrapProgress = document.querySelector(".codec-bootstrap-progress");
+  const codecBootstrapProgressFill = document.querySelector("#codec-bootstrap-progress-fill");
+  const codecBootstrapPercent = document.querySelector("#codec-bootstrap-percent");
+  const codecBootstrapStage = document.querySelector("#codec-bootstrap-stage");
 
   let updateVersion = 0;
   let clientInitialisation = null;
   let clientInitialisationError = null;
+  let bootstrapVisible = false;
+  let bootstrapHideTimer = null;
+  let inputDebounceTimer = null;
+
+  const inputDebounceDelay = () => (
+    window.matchMedia("(pointer: coarse), (max-width: 640px)").matches ? 460 : 180
+  );
 
   const api = async (endpoint, body) => {
     const response = await fetch(endpoint, {
@@ -43,6 +56,62 @@
     const suffix = Number.isInteger(status.progress) ? ` ${status.progress}%` : "";
     codecStatusElement.textContent = `${status.message}${suffix}`;
     codecStatusElement.dataset.state = status.stage || "idle";
+    updateBootstrap(status);
+  }
+
+  function showBootstrap() {
+    if (bootstrapHideTimer) {
+      window.clearTimeout(bootstrapHideTimer);
+      bootstrapHideTimer = null;
+    }
+    if (bootstrapVisible) return;
+    bootstrapVisible = true;
+    codecBootstrap.hidden = false;
+    codecBootstrap.setAttribute("aria-busy", "true");
+    window.requestAnimationFrame(() => codecBootstrap.classList.add("is-visible"));
+  }
+
+  function hideBootstrap() {
+    if (!bootstrapVisible) return;
+    bootstrapVisible = false;
+    codecBootstrap.classList.remove("is-visible");
+    codecBootstrap.setAttribute("aria-busy", "false");
+    bootstrapHideTimer = window.setTimeout(() => {
+      if (!bootstrapVisible) codecBootstrap.hidden = true;
+      bootstrapHideTimer = null;
+    }, 280);
+  }
+
+  function updateBootstrap(status) {
+    // A populated V26 Cache Storage cache reports only "cache" stages. The
+    // full-screen view is deliberately reserved for a new runtime download.
+    if (status.stage === "download") showBootstrap();
+    if (!bootstrapVisible) return;
+
+    const stagedProgress = { compile: 92, loader: 93, install: 96, verify: 99, ready: 100 };
+    const progress = Number.isInteger(status.progress)
+      ? status.progress
+      : (stagedProgress[status.stage] ?? 0);
+    const stageLabel = {
+      download: "Downloading runtime",
+      cache: "Reading saved runtime",
+      manifest: "Checking codec assets",
+      compile: "Starting WebAssembly",
+      loader: "Loading Python runtime",
+      install: "Installing V26 codec",
+      verify: "Verifying compatibility",
+      ready: "Ready",
+      error: "Setup failed",
+    }[status.stage] || "Preparing codec";
+
+    codecBootstrapMessage.textContent = status.message;
+    codecBootstrapStage.textContent = stageLabel;
+    codecBootstrapPercent.textContent = `${progress}%`;
+    codecBootstrapProgress.setAttribute("aria-valuenow", String(progress));
+    codecBootstrapProgressFill.style.width = `${progress}%`;
+
+    if (status.stage === "ready") hideBootstrap();
+    if (status.stage === "error") hideBootstrap();
   }
 
   function updateQueryWarning(input) {
@@ -123,6 +192,24 @@
     return window.HaMrBrowserCodec.compress(input, mode);
   }
 
+  function cancelScheduledOutput() {
+    if (inputDebounceTimer === null) return;
+    window.clearTimeout(inputDebounceTimer);
+    inputDebounceTimer = null;
+  }
+
+  function scheduleInputOutput() {
+    cancelScheduledOutput();
+    if (!inputLinkElement.value.trim()) {
+      void updateOutput();
+      return;
+    }
+    inputDebounceTimer = window.setTimeout(() => {
+      inputDebounceTimer = null;
+      void updateOutput();
+    }, inputDebounceDelay());
+  }
+
   async function updateOutput() {
     const version = ++updateVersion;
     const input = inputLinkElement.value.trim();
@@ -174,10 +261,19 @@
     return true;
   }
 
+  async function hasCachedClientCodec() {
+    if (!("caches" in window)) return false;
+    try {
+      return (await caches.keys()).some((name) => name.startsWith("ha-mr-v26-"));
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function registerCodecServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
     try {
-      await navigator.serviceWorker.register("/static/browser-codec-sw.js");
+      await navigator.serviceWorker.register("/offline_sw.js", { scope: "/" });
     } catch (error) {
       console.warn("Browser codec asset cache worker could not register.", error);
     }
@@ -187,6 +283,9 @@
     if (clientInitialisation) return clientInitialisation;
     clientInitialisation = (async () => {
       try {
+        // On a genuinely new browser, cover both the worker precache and the
+        // runtime's own download with the prominent bootstrap screen.
+        if (!await hasCachedClientCodec()) showBootstrap();
         await registerCodecServiceWorker();
         await window.HaMrBrowserCodec.initialise(setCodecStatus);
         clientInitialisationError = null;
@@ -203,10 +302,19 @@
   }
 
   async function initialise() {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type === "ha-mr-precache-progress") setCodecStatus(event.data);
+      });
+    }
     window.addEventListener("hashchange", () => { void resolveFragment(); });
-    inputLinkElement.addEventListener("input", () => { void updateOutput(); });
-    transportSelect.addEventListener("change", () => { void updateOutput(); });
+    inputLinkElement.addEventListener("input", scheduleInputOutput);
+    transportSelect.addEventListener("change", () => {
+      cancelScheduledOutput();
+      void updateOutput();
+    });
     executionSelect.addEventListener("change", () => {
+      cancelScheduledOutput();
       if (usingClient()) {
         if (window.HaMrBrowserCodec.ready) {
           setCodecStatus({ stage: "ready", message: "Client-side V26 codec ready.", progress: 100 });
@@ -218,8 +326,14 @@
       }
       void updateOutput();
     });
-    qrSetting.addEventListener("change", () => { void updateOutput(); });
-    qrCodeCorrectionLevelElement.addEventListener("change", () => { void updateOutput(); });
+    qrSetting.addEventListener("change", () => {
+      cancelScheduledOutput();
+      void updateOutput();
+    });
+    qrCodeCorrectionLevelElement.addEventListener("change", () => {
+      cancelScheduledOutput();
+      void updateOutput();
+    });
     // A short fragment link stays on the default spinner until it redirects.
     // Ordinary visits reveal the interface immediately and prepare the codec in the background.
     if (await resolveFragment()) return;

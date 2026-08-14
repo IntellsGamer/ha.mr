@@ -266,3 +266,121 @@ footer {
   .setting-row { grid-template-columns: 1fr; gap: 6px; }
   select { max-width: none; width: 100%; }
 }
+
+.codec-bootstrap[hidden] { display: none !important; }
+
+.codec-bootstrap {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(245, 247, 248, .93);
+  backdrop-filter: blur(13px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .26s ease;
+}
+
+.codec-bootstrap.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.codec-bootstrap-card {
+  width: min(100%, 470px);
+  border: 1px solid var(--line);
+  border-radius: 19px;
+  padding: clamp(25px, 7vw, 40px);
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 22px 65px rgba(24, 46, 61, .14);
+}
+
+.codec-bootstrap-brand,
+.codec-bootstrap-eyebrow,
+.codec-bootstrap-message,
+.codec-bootstrap-meta,
+.codec-bootstrap-note {
+  margin: 0;
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.codec-bootstrap-brand {
+  color: var(--ink);
+  font-family: "Hammersmith One", system-ui, sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: -.075em;
+  line-height: 1;
+}
+
+.codec-bootstrap-brand span { color: var(--accent); }
+
+.codec-bootstrap-eyebrow {
+  margin-top: 25px;
+  color: var(--accent);
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.codec-bootstrap h2 {
+  margin: 10px 0 0;
+  color: var(--ink);
+  font-family: "Hammersmith One", system-ui, sans-serif;
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-weight: 400;
+  letter-spacing: -.035em;
+  line-height: 1.08;
+}
+
+.codec-bootstrap-message {
+  min-height: 2.8em;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.5;
+}
+
+.codec-bootstrap-progress {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e5edf1;
+}
+
+.codec-bootstrap-progress-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1572a1, #47a7cf);
+  transition: width .18s ease;
+}
+
+.codec-bootstrap-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: .64rem;
+  line-height: 1.35;
+}
+
+#codec-bootstrap-percent { color: var(--accent); font-weight: 500; }
+#codec-bootstrap-stage { text-align: right; }
+
+.codec-bootstrap-note {
+  margin-top: 26px;
+  color: #86939c;
+  font-size: .64rem;
+  line-height: 1.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codec-bootstrap,
+  .codec-bootstrap-progress-fill { transition: none; }
+}

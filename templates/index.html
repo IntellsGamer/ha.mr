@@ -4,10 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ha.mr - link compressor</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}?v=v26-browser-6">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}?v=v26-browser-10">
 </head>
 <body>
   <div id="loader" aria-hidden="true"></div>
+
+  <section id="codec-bootstrap" class="codec-bootstrap" aria-live="polite" aria-busy="true" hidden>
+    <div class="codec-bootstrap-card">
+      <p class="codec-bootstrap-brand">ha<span>.</span>mr</p>
+      <p class="codec-bootstrap-eyebrow">First-time setup</p>
+      <h2>Preparing the local link codec</h2>
+      <p id="codec-bootstrap-message" class="codec-bootstrap-message">Checking browser codec assets…</p>
+      <div class="codec-bootstrap-progress" role="progressbar" aria-label="Browser codec download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span id="codec-bootstrap-progress-fill" class="codec-bootstrap-progress-fill"></span>
+      </div>
+      <div class="codec-bootstrap-meta">
+        <span id="codec-bootstrap-percent">0%</span>
+        <span id="codec-bootstrap-stage">Checking cache</span>
+      </div>
+      <p class="codec-bootstrap-note">The exact V26 codec runs in this browser. It is cached for later visits and offline use.</p>
+    </div>
+  </section>
 
   <main id="content" class="app-shell">
     <header class="brand">
@@ -64,7 +81,7 @@
     <footer>Self-contained links. No redirect database.</footer>
   </main>
 
-  <script src="{{ url_for('static', path='browser_codec_runtime.js') }}?v=v26-browser-6"></script>
-  <script src="{{ url_for('static', path='app.js') }}?v=v26-browser-6"></script>
+  <script src="{{ url_for('static', path='browser_codec_runtime.js') }}?v=v26-browser-10"></script>
+  <script src="{{ url_for('static', path='app.js') }}?v=v26-browser-10"></script>
 </body>
 </html>

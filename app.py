@@ -9,14 +9,16 @@ from __future__ import annotations
 
 import asyncio
 import os
+import time
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 from multiprocessing import get_context
 from pathlib import Path
+from threading import Lock
 from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -29,6 +31,14 @@ CPU_WORKERS = max(1, int(os.environ.get("HA_MR_CPU_WORKERS", str(min(4, os.cpu_c
 CPU_QUEUE_LIMIT = max(CPU_WORKERS, int(os.environ.get("HA_MR_CPU_QUEUE_LIMIT", str(CPU_WORKERS * 8))))
 CPU_POOL = ProcessPoolExecutor(max_workers=CPU_WORKERS, mp_context=get_context("spawn"))
 CPU_SLOTS = asyncio.Semaphore(CPU_QUEUE_LIMIT)
+SERVER_RATE_LIMIT_REQUESTS = max(1, int(os.environ.get("HA_MR_SERVER_RATE_LIMIT_REQUESTS", "60")))
+SERVER_RATE_LIMIT_WINDOW_SECONDS = max(1.0, float(os.environ.get("HA_MR_SERVER_RATE_LIMIT_WINDOW_SECONDS", "60")))
+SERVER_RATE_LIMIT_BURST = max(1, int(os.environ.get("HA_MR_SERVER_RATE_LIMIT_BURST", "20")))
+SERVER_RATE_LIMIT_BURST = min(SERVER_RATE_LIMIT_BURST, SERVER_RATE_LIMIT_REQUESTS)
+SERVER_RATE_LIMIT_REFILL_PER_SECOND = SERVER_RATE_LIMIT_REQUESTS / SERVER_RATE_LIMIT_WINDOW_SECONDS
+SERVER_RATE_LIMIT_MAX_CLIENTS = max(100, int(os.environ.get("HA_MR_SERVER_RATE_LIMIT_MAX_CLIENTS", "10000")))
+SERVER_RATE_LIMIT_BUCKETS: dict[str, tuple[float, float]] = {}
+SERVER_RATE_LIMIT_LOCK = Lock()
 
 
 @asynccontextmanager
@@ -55,6 +65,39 @@ def _text(value: Any, *, field: str) -> str:
     return value
 
 
+async def _enforce_server_rate_limit(request: Request) -> None:
+    """Apply a small in-memory token bucket to server-side codec work only."""
+    client_key = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    with SERVER_RATE_LIMIT_LOCK:
+        if client_key not in SERVER_RATE_LIMIT_BUCKETS and len(SERVER_RATE_LIMIT_BUCKETS) >= SERVER_RATE_LIMIT_MAX_CLIENTS:
+            stale_before = now - SERVER_RATE_LIMIT_WINDOW_SECONDS * 2
+            for key, (_, touched) in list(SERVER_RATE_LIMIT_BUCKETS.items()):
+                if touched < stale_before:
+                    SERVER_RATE_LIMIT_BUCKETS.pop(key, None)
+            if len(SERVER_RATE_LIMIT_BUCKETS) >= SERVER_RATE_LIMIT_MAX_CLIENTS:
+                oldest_key = min(SERVER_RATE_LIMIT_BUCKETS, key=lambda key: SERVER_RATE_LIMIT_BUCKETS[key][1])
+                SERVER_RATE_LIMIT_BUCKETS.pop(oldest_key, None)
+        tokens, updated_at = SERVER_RATE_LIMIT_BUCKETS.get(client_key, (float(SERVER_RATE_LIMIT_BURST), now))
+        tokens = min(
+            float(SERVER_RATE_LIMIT_BURST),
+            tokens + (now - updated_at) * SERVER_RATE_LIMIT_REFILL_PER_SECOND,
+        )
+        if tokens < 1:
+            retry_after = max(1, int((1 - tokens) / SERVER_RATE_LIMIT_REFILL_PER_SECOND) + 1)
+            SERVER_RATE_LIMIT_BUCKETS[client_key] = (tokens, now)
+            raise HTTPException(
+                status_code=429,
+                detail="Server-side codec rate limit reached. Please retry shortly or use client-side V26.",
+                headers={
+                    "Retry-After": str(retry_after),
+                    "X-RateLimit-Limit": str(SERVER_RATE_LIMIT_REQUESTS),
+                    "X-RateLimit-Remaining": "0",
+                },
+            )
+        SERVER_RATE_LIMIT_BUCKETS[client_key] = (tokens - 1, now)
+
+
 async def _cpu(function: Callable[..., Any], *args: Any) -> Any:
     """Run bounded CPU work outside the event loop and preserve codec errors."""
     async with CPU_SLOTS:
@@ -75,6 +118,16 @@ async def _json(request: Request) -> dict[str, Any]:
     return body
 
 
+@app.get("/offline_sw.js", include_in_schema=False)
+async def offline_service_worker() -> FileResponse:
+    """Serve the offline-first worker at root scope."""
+    return FileResponse(
+        ROOT / "offline_sw.js",
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request) -> HTMLResponse:
     """Serve the ha.mr-style page; fragments are resolved by the browser bridge."""
@@ -83,6 +136,7 @@ async def index(request: Request) -> HTMLResponse:
 
 @app.post("/api/compress")
 async def api_compress(request: Request) -> JSONResponse:
+    await _enforce_server_rate_limit(request)
     body = await _json(request)
     url = _text(body.get("url", ""), field="url")
     mode = body.get("mode", "ascii")
@@ -95,6 +149,7 @@ async def api_compress(request: Request) -> JSONResponse:
 
 @app.post("/api/decompress")
 async def api_decompress(request: Request) -> JSONResponse:
+    await _enforce_server_rate_limit(request)
     body = await _json(request)
     payload = _text(body.get("payload", ""), field="payload")
     mode = body.get("mode", "auto")
@@ -106,12 +161,14 @@ async def api_decompress(request: Request) -> JSONResponse:
 @app.get("/resolve")
 async def resolve_fragment_payload(request: Request, payload: str = "") -> RedirectResponse:
     """Receive browser-only fragments through a query bridge and redirect once decoded."""
+    await _enforce_server_rate_limit(request)
     destination = await _cpu(decode_payload, _text(payload.replace(" ", ""), field="payload"), "auto")
     return RedirectResponse(destination, status_code=302)
 
 
 @app.post("/api/qr")
 async def api_qr(request: Request) -> JSONResponse:
+    await _enforce_server_rate_limit(request)
     body = await _json(request)
     url = _text(body.get("url", ""), field="url")
     try:
@@ -133,8 +190,9 @@ async def healthz() -> JSONResponse:
 
 
 @app.get("/{payload:path}", response_model=None)
-async def resolve_qr_payload(payload: str) -> RedirectResponse | PlainTextResponse:
+async def resolve_qr_payload(request: Request, payload: str) -> RedirectResponse | PlainTextResponse:
     """Decode QR-mode path payloads without creating server-side link state."""
+    await _enforce_server_rate_limit(request)
     try:
         destination = await _cpu(decode_payload, _text(payload, field="payload"), "qr")
     except HTTPException:
