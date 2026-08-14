@@ -1,0 +1,13 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "training": "not required",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "totals": {
+    "urls": 4780,
+    "existing_symbols": 145856,
+    "best_symbols": 145856,
+    "urls_with_base36_tokens": 603
+  }
+}

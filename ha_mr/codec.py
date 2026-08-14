@@ -27,6 +27,10 @@ from .diverse_phrases import inverse as diverse_phrase_inverse
 from .diverse_phrases import transform as diverse_phrase_transform
 from .factorized_grammar import candidates as factorized_candidates
 from .factorized_grammar import inverse as factorized_inverse
+from .percent_protocol import inverse as percent_protocol_inverse
+from .percent_protocol import transform as percent_protocol_transform
+from .universal_prefix import inverse as universal_prefix_inverse
+from .universal_prefix import transform as universal_prefix_transform
 from .codec_data import (
     DOMAIN_ENCODE,
     OUTPUT_ALPHABET_ASCII,
@@ -471,6 +475,28 @@ _V5_VERSION = 5
 _V7_VERSION = 7
 _V8_VERSION = 8
 _V11_VERSION = 11
+# Compact successors omit the redundant 0x01 byte used by historic adaptive
+# frames. Each begins with a non-zero version byte, so integer transport still
+# preserves the header without any extra sentinel.
+_COMPACT_BASE_VERSION = 16
+_COMPACT_FACTORIZED_VERSION = 17
+_COMPACT_SERVICE_VERSION = 18
+_COMPACT_DIRECT_VERSION = 19
+_COMPACT_PHRASE_VERSION = 20
+_COMPACT_DIVERSE_VERSION = 21
+_COMPACT_UNIVERSAL_VERSION = 22
+_COMPACT_PERCENT_PROTOCOL_VERSION = 23
+_COMPACT_VERSIONS = {
+    _COMPACT_BASE_VERSION,
+    _COMPACT_FACTORIZED_VERSION,
+    _COMPACT_SERVICE_VERSION,
+    _COMPACT_DIRECT_VERSION,
+    _COMPACT_PHRASE_VERSION,
+    _COMPACT_DIVERSE_VERSION,
+    _COMPACT_UNIVERSAL_VERSION,
+    _COMPACT_PERCENT_PROTOCOL_VERSION,
+}
+_LEGACY_ADAPTIVE_VERSIONS = {_V1_VERSION, _V2_VERSION, _V3_VERSION, _V4_VERSION, _V5_VERSION, _V7_VERSION, _V8_VERSION, _V11_VERSION}
 _V1_METHOD_RAW = 0
 _V1_METHOD_STATIC = 1
 _MAX_V1_URL_BYTES = 65_536
@@ -544,8 +570,28 @@ def _pack_adaptive_frame(version: int, stream: bytes, method: int, alphabet: Seq
 
 
 def _pack_direct_frame(version: int, value: bytes, alphabet: Sequence[str]) -> str:
-    """Pack a fixed-layout adaptive frame that does not need a method byte."""
+    """Pack a historical fixed-layout adaptive frame that has no method byte."""
     packed = int.from_bytes(b"\x01" + bytes((version,)) + value, "big")
+    transport = EMOJI_V1_ALPHABET if _uses_legacy_emoji_alphabet(alphabet) else alphabet
+    payload = _number_to_string((packed << 1) | 1, transport)
+    return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
+
+
+def _pack_compact_frame(version: int, stream: bytes, method: int, alphabet: Sequence[str]) -> str:
+    """Pack a post-V11 adaptive frame without the redundant leading sentinel."""
+    if version not in _COMPACT_VERSIONS:
+        raise CodecError("Unknown compact adaptive frame version.")
+    packed = int.from_bytes(bytes((version, method)) + stream, "big")
+    transport = EMOJI_V1_ALPHABET if _uses_legacy_emoji_alphabet(alphabet) else alphabet
+    payload = _number_to_string((packed << 1) | 1, transport)
+    return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
+
+
+def _pack_compact_direct_frame(version: int, value: bytes, alphabet: Sequence[str]) -> str:
+    """Pack a compact fixed-layout frame without a compression-method byte."""
+    if version != _COMPACT_DIRECT_VERSION:
+        raise CodecError("Unknown compact direct frame version.")
+    packed = int.from_bytes(bytes((version,)) + value, "big")
     transport = EMOJI_V1_ALPHABET if _uses_legacy_emoji_alphabet(alphabet) else alphabet
     payload = _number_to_string((packed << 1) | 1, transport)
     return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
@@ -558,34 +604,46 @@ def _adaptive_unpack(payload: str, alphabet: Sequence[str]) -> str:
         raise CodecError("Payload is not an adaptive frame.")
     value = number >> 1
     raw = value.to_bytes((value.bit_length() + 7) // 8, "big")
-    if len(raw) < 3 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION, _V4_VERSION, _V5_VERSION, _V7_VERSION, _V8_VERSION, _V11_VERSION}:
+    historical = len(raw) >= 3 and raw[0] == 1 and raw[1] in _LEGACY_ADAPTIVE_VERSIONS
+    compact = len(raw) >= 2 and raw[0] in _COMPACT_VERSIONS
+    if not historical and not compact:
         raise CodecError("Invalid adaptive frame header.")
-    version = raw[1]
+    version = raw[1] if historical else raw[0]
     try:
         if version == _V5_VERSION:
             return unpack_youtube_url(raw[2:])
-        method = raw[2]
-        stream = raw[3:]
-        if version == _V4_VERSION:
+        if version == _COMPACT_DIRECT_VERSION:
+            return unpack_youtube_url(raw[1:])
+        method_offset = 2 if historical else 1
+        method = raw[method_offset]
+        stream = raw[method_offset + 1:]
+        if version in {_V4_VERSION, _COMPACT_SERVICE_VERSION}:
             if not stream:
                 raise ValueError("truncated service-prefix frame")
             prefix_index, stream = stream[0], stream[1:]
             output = service_inverse(prefix_index, _inflate(stream, method))
-        elif version == _V11_VERSION:
+        elif version in {_V11_VERSION, _COMPACT_FACTORIZED_VERSION}:
             if len(stream) < 2:
                 raise ValueError("truncated factorized grammar frame")
             host_index, path_index, stream = stream[0], stream[1], stream[2:]
             output = factorized_inverse(host_index, path_index, semantic_inverse(_inflate(stream, method)))
         else:
-            output = _inflate(stream, method)
-            if version == _V2_VERSION:
+            # Compact V16 retains all historic V1/V2/V3 representations in a
+            # single method family: raw=0/1, semantic=2/3, host=4/5.
+            base_method = method % 2 if version == _COMPACT_BASE_VERSION else method
+            output = _inflate(stream, base_method)
+            if version == _V2_VERSION or (version == _COMPACT_BASE_VERSION and method in {2, 3}):
                 output = semantic_inverse(output)
-            elif version == _V3_VERSION:
+            elif version == _V3_VERSION or (version == _COMPACT_BASE_VERSION and method in {4, 5}):
                 output = host_inverse(output)
-            elif version == _V7_VERSION:
+            elif version in {_V7_VERSION, _COMPACT_PHRASE_VERSION}:
                 output = general_phrase_inverse(semantic_inverse(output))
-            elif version == _V8_VERSION:
+            elif version in {_V8_VERSION, _COMPACT_DIVERSE_VERSION}:
                 output = diverse_phrase_inverse(semantic_inverse(output))
+            elif version == _COMPACT_UNIVERSAL_VERSION:
+                output = semantic_inverse(universal_prefix_inverse(output))
+            elif version == _COMPACT_PERCENT_PROTOCOL_VERSION:
+                output = percent_protocol_inverse(semantic_inverse(output))
         return output.decode("utf-8")
     except (UnicodeDecodeError, ValueError) as exc:
         raise CodecError("Adaptive payload does not contain a valid UTF-8 URL.") from exc
@@ -604,9 +662,11 @@ def adaptive_payload_version(payload: str, alphabet: Sequence[str]) -> int:
     if not number & 1:
         return 0
     raw = (number >> 1).to_bytes(((number >> 1).bit_length() + 7) // 8, "big")
-    if len(raw) < 3 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION, _V4_VERSION, _V5_VERSION, _V7_VERSION, _V8_VERSION, _V11_VERSION}:
-        raise CodecError("Invalid adaptive frame header.")
-    return raw[1]
+    if len(raw) >= 3 and raw[0] == 1 and raw[1] in _LEGACY_ADAPTIVE_VERSIONS:
+        return raw[1]
+    if len(raw) >= 2 and raw[0] in _COMPACT_VERSIONS:
+        return raw[0]
+    raise CodecError("Invalid adaptive frame header.")
 
 
 def payload_symbol_count(payload: str, alphabet: Sequence[str]) -> int:
@@ -655,76 +715,78 @@ def compress_adaptive(input_url: str, alphabet: Sequence[str] = ASCII_ALPHABET) 
         pass
 
     encoded = normalised.encode("utf-8")
-    for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
-        payload = _pack_adaptive_frame(_V1_VERSION, _deflate(encoded, method), method, alphabet)
-        candidates.append((payload, payload_symbol_count(payload, alphabet)))
-
-    # V2 is a semantic byte transform followed by the same independently
-    # decodable raw/static-DEFLATE choices. It wins only when its full frame is
-    # shorter than V0 and V1, so short familiar links retain their V0 payloads.
     semantic = semantic_transform(encoded, opaque_tokens=True)
-    if semantic != encoded:
-        for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
-            payload = _pack_adaptive_frame(_V2_VERSION, _deflate(semantic, method), method, alphabet)
-            candidates.append((payload, payload_symbol_count(payload, alphabet)))
 
-    # V3 adds a frozen host index only when it changes the semantic stream.
-    # The complete V3 frame still competes on exact emitted size.
+    # Compact V16 represents the old raw, semantic, and frozen-host paths in
+    # one method family while removing their redundant leading frame byte.
     host_semantic = host_transform(encoded)
-    if host_semantic != semantic:
-        for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
-            payload = _pack_adaptive_frame(_V3_VERSION, _deflate(host_semantic, method), method, alphabet)
+    for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
+        payload = _pack_compact_frame(_COMPACT_BASE_VERSION, _deflate(encoded, method), method, alphabet)
+        candidates.append((payload, payload_symbol_count(payload, alphabet)))
+        if semantic != encoded:
+            payload = _pack_compact_frame(_COMPACT_BASE_VERSION, _deflate(semantic, method), 2 + method, alphabet)
+            candidates.append((payload, payload_symbol_count(payload, alphabet)))
+        if host_semantic != semantic:
+            payload = _pack_compact_frame(_COMPACT_BASE_VERSION, _deflate(host_semantic, method), 4 + method, alphabet)
             candidates.append((payload, payload_symbol_count(payload, alphabet)))
 
-    # V4 stores one frozen service-grammar prefix index, then DEFLATE-compresses
-    # only the semantic suffix. Every matching prefix is evaluated because the
-    # shortest prefix is not always the shortest final frame.
+    # V18 retains the full general service-prefix grammar while compacting the
+    # frame header. Each matching prefix remains a separate exact-size choice.
     for prefix_index, suffix in service_candidates(encoded):
         for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
             stream = bytes((prefix_index,)) + _deflate(suffix, method)
-            payload = _pack_adaptive_frame(_V4_VERSION, stream, method, alphabet)
+            payload = _pack_compact_frame(_COMPACT_SERVICE_VERSION, stream, method, alphabet)
             candidates.append((payload, payload_symbol_count(payload, alphabet)))
 
-    # V5 avoids generic compression entirely for the exact canonical YouTube
-    # watch grammar: the eleven Base64URL identifier is a fixed 66-bit value.
+    # The direct Base64URL video-ID packing is retained as compact V19 for
+    # compatibility with its historical V5 decoder, but it is only one of many
+    # adaptive candidates and never displaces more general wins.
     youtube_id = pack_youtube_url(normalised)
     if youtube_id is not None:
-        payload = _pack_direct_frame(_V5_VERSION, youtube_id, alphabet)
+        payload = _pack_compact_direct_frame(_COMPACT_DIRECT_VERSION, youtube_id, alphabet)
         candidates.append((payload, payload_symbol_count(payload, alphabet)))
 
-    # V7 is deliberately general: phrases are delimiter-bounded structures
-    # selected anywhere in the URL, then protected by semantic packing before
-    # DEFLATE. It is not limited to a host or service-specific grammar.
     phrase_stream = general_phrase_transform(encoded)
     phrase_semantic = semantic_transform(phrase_stream, opaque_tokens=True)
     if phrase_semantic != encoded:
         for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
-            payload = _pack_adaptive_frame(_V7_VERSION, _deflate(phrase_semantic, method), method, alphabet)
+            payload = _pack_compact_frame(_COMPACT_PHRASE_VERSION, _deflate(phrase_semantic, method), method, alphabet)
             candidates.append((payload, payload_symbol_count(payload, alphabet)))
 
-    # V8 uses a second, diversity-pruned general table. Its contents favour
-    # reusable path/query structures over overlapping scheme and host strings.
     diverse_stream = diverse_phrase_transform(encoded)
     diverse_semantic = semantic_transform(diverse_stream, opaque_tokens=True)
     if diverse_semantic != encoded:
         for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
-            payload = _pack_adaptive_frame(_V8_VERSION, _deflate(diverse_semantic, method), method, alphabet)
+            payload = _pack_compact_frame(_COMPACT_DIVERSE_VERSION, _deflate(diverse_semantic, method), method, alphabet)
             candidates.append((payload, payload_symbol_count(payload, alphabet)))
 
-    # V11 composes independent frozen host and path/query-prefix tables. Unlike
-    # a single service table, their two-byte index pair covers useful host/path
-    # combinations without requiring a redirect database or per-URL state.
+    # V17 composes independent frozen host and path/query tables. It is a
+    # grammar over URL structure, not a database of destination redirects.
     for host_index, path_index, suffix in factorized_candidates(encoded):
         suffix_semantic = semantic_transform(suffix, opaque_tokens=True)
         for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
             stream = bytes((host_index, path_index)) + _deflate(suffix_semantic, method)
-            payload = _pack_adaptive_frame(_V11_VERSION, stream, method, alphabet)
+            payload = _pack_compact_frame(_COMPACT_FACTORIZED_VERSION, stream, method, alphabet)
+            candidates.append((payload, payload_symbol_count(payload, alphabet)))
+
+    # Domain-neutral syntax candidates. V22 packs only the universal URL start;
+    # V23 packs nested percent-encoded protocol strings commonly used by any
+    # redirect or callback service. Both still compete on emitted size.
+    universal = universal_prefix_transform(semantic)
+    if universal != semantic:
+        for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
+            payload = _pack_compact_frame(_COMPACT_UNIVERSAL_VERSION, _deflate(universal, method), method, alphabet)
+            candidates.append((payload, payload_symbol_count(payload, alphabet)))
+    nested_protocol = semantic_transform(percent_protocol_transform(encoded), opaque_tokens=True)
+    if nested_protocol != semantic:
+        for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
+            payload = _pack_compact_frame(_COMPACT_PERCENT_PROTOCOL_VERSION, _deflate(nested_protocol, method), method, alphabet)
             candidates.append((payload, payload_symbol_count(payload, alphabet)))
     return min(candidates, key=lambda item: item[1])[0]
 
 
 def decompress_adaptive(payload: str, alphabet: Sequence[str] = ASCII_ALPHABET) -> str:
-    """Decode legacy V0 or an adaptive V1–V5/V7/V8/V11 frame."""
+    """Decode legacy V0, historical adaptive frames, or compact V16+ frames."""
     return _adaptive_unpack(payload, alphabet) if is_v1_payload(payload, alphabet) else decompress(payload, alphabet)
 
 

@@ -1,0 +1,20 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "training": "not required except existing static dictionary",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "totals": {
+    "urls": 4780,
+    "existing_symbols": 145856,
+    "best_symbols": 145856
+  },
+  "by_strategy": {
+    "fixed_raw": {},
+    "fixed_static": {},
+    "huffman_only_raw": {},
+    "rle_raw": {},
+    "fixed_semantic": {},
+    "fixed_semantic_static": {}
+  }
+}

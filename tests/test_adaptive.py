@@ -62,12 +62,18 @@ class AdaptiveCodecTests(unittest.TestCase):
         self.assertLess(len(transformed), len(url.encode("utf-8")))
         self.assertEqual(host_inverse(transformed).decode("utf-8"), url)
 
-    def test_v5_direct_frame_shrinks_and_round_trips_youtube_watch_url(self) -> None:
+    def test_historical_v5_direct_payload_remains_decodable(self) -> None:
+        self.assertEqual(
+            decompress_adaptive("oz~KA/;60*rw5", ASCII_ALPHABET),
+            "https://www.youtube.com/watch?v=Xic_cDYrtnM",
+        )
+
+    def test_v19_compact_direct_frame_shrinks_and_round_trips_youtube_watch_url(self) -> None:
         url = "https://www.youtube.com/watch?v=Xic_cDYrtnM"
         legacy = compress(url, ASCII_ALPHABET)
         payload = compress_adaptive(url, ASCII_ALPHABET)
-        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 5)
-        self.assertEqual(payload_symbol_count(payload, ASCII_ALPHABET), 13)
+        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 19)
+        self.assertLessEqual(payload_symbol_count(payload, ASCII_ALPHABET), 13)
         self.assertLess(payload_symbol_count(payload, ASCII_ALPHABET), payload_symbol_count(legacy, ASCII_ALPHABET))
         self.assertEqual(decompress_adaptive(payload, ASCII_ALPHABET), url)
 
@@ -82,21 +88,21 @@ class AdaptiveCodecTests(unittest.TestCase):
         self.assertEqual(diverse_phrase_inverse(diverse), url)
         self.assertTrue(general != url or diverse != url)
 
-    def test_v11_factorized_general_grammar_shrinks_and_round_trips(self) -> None:
+    def test_v17_compact_factorized_general_grammar_shrinks_and_round_trips(self) -> None:
         url = "https://www.reddit.com/r/AskReddit/wiki/index#rules"
         legacy = compress(url, ASCII_ALPHABET)
         payload = compress_adaptive(url, ASCII_ALPHABET)
-        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 11)
+        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 17)
         self.assertLess(payload_symbol_count(payload, ASCII_ALPHABET), payload_symbol_count(legacy, ASCII_ALPHABET))
         self.assertEqual(decompress_adaptive(payload, ASCII_ALPHABET), url)
 
-    def test_v2_semantic_frame_beats_v1_for_opaque_shared_link_shape(self) -> None:
+    def test_v22_universal_prefix_frame_beats_older_opaque_candidates(self) -> None:
         url = (
             "https://example.com/redirect/12345678901234567890?next=https%3A%2F%2Fnews.example%2F"
             "a%20b&id=1ae03060-3f06-4a5c-9ac6-b5c1b4a62664&token=QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo"
         )
         payload = compress_adaptive(url, ASCII_ALPHABET)
-        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 2)
+        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 22)
         self.assertEqual(decompress_adaptive(payload, ASCII_ALPHABET), url)
 
     def test_v1_emoji_transport_is_prefix_safe(self) -> None:

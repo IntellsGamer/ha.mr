@@ -1,0 +1,20 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "totals": {
+    "urls": 4780,
+    "mismatches": 936
+  },
+  "by_frame_version": {
+    "0": 936
+  },
+  "by_normalization_class": {
+    "query_normalized_or_reordered": 179,
+    "other_url_normalization": 637,
+    "root_slash_elided": 119,
+    "fragment_normalized": 1
+  },
+  "privacy": "No individual URLs, destination strings, or hostnames are stored."
+}

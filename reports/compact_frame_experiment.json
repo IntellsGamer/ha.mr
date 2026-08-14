@@ -1,0 +1,36 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "training": "not required; existing frozen tables only",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "totals": {
+    "urls": 4780,
+    "existing_symbols": 145856,
+    "best_symbols": 145106,
+    "wins": 750,
+    "saved_symbols": 750
+  },
+  "by_compact_frame_family": {
+    "v17": {
+      "wins": 141,
+      "saved_symbols": 141
+    },
+    "v18": {
+      "wins": 571,
+      "saved_symbols": 571
+    },
+    "v20": {
+      "wins": 10,
+      "saved_symbols": 10
+    },
+    "v21": {
+      "wins": 17,
+      "saved_symbols": 17
+    },
+    "v16": {
+      "wins": 11,
+      "saved_symbols": 11
+    }
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "training": "odd IDs",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "examples": {
+    "https://manus.im/": {
+      "ascii_symbols": 7,
+      "ascii_version": 0,
+      "cjk_symbols": 4,
+      "round_trip": false
+    },
+    "https://manus.im/docs/agents?mode=asgi": {
+      "ascii_symbols": 26,
+      "ascii_version": 0,
+      "cjk_symbols": 14,
+      "round_trip": true
+    },
+    "https://rare-example.invalid/a/deep/path?with=parameters": {
+      "ascii_symbols": 43,
+      "ascii_version": 0,
+      "cjk_symbols": 23,
+      "round_trip": true
+    }
+  },
+  "normalization": {
+    "legacy_normalized_outputs": 895
+  },
+  "buckets": {
+    "seen_11_to_100_times": {
+      "adaptive_ascii": {
+        "urls": 412,
+        "mean_symbols": 39.269,
+        "median_symbols": 33,
+        "p95_symbols": 85
+      },
+      "adaptive_cjk": {
+        "urls": 412,
+        "mean_symbols": 21.133,
+        "median_symbols": 18,
+        "p95_symbols": 46
+      },
+      "ascii_frame_wins": {
+        "0": 398,
+        "16": 1,
+        "17": 3,
+        "22": 9,
+        "23": 1
+      },
+      "mean_legacy_minus_adaptive_ascii_symbols": 0.272
+    },
+    "seen_1_to_2_times": {
+      "adaptive_ascii": {
+        "urls": 162,
+        "mean_symbols": 43.006,
+        "median_symbols": 39,
+        "p95_symbols": 91
+      },
+      "adaptive_cjk": {
+        "urls": 162,
+        "mean_symbols": 23.123,
+        "median_symbols": 21,
+        "p95_symbols": 49
+      },
+      "ascii_frame_wins": {
+        "0": 157,
+        "20": 1,
+        "22": 4
+      },
+      "mean_legacy_minus_adaptive_ascii_symbols": 0.919
+    },
+    "seen_3_to_10_times": {
+      "adaptive_ascii": {
+        "urls": 231,
+        "mean_symbols": 45.502,
+        "median_symbols": 39,
+        "p95_symbols": 93
+      },
+      "adaptive_cjk": {
+        "urls": 231,
+        "mean_symbols": 24.463,
+        "median_symbols": 21,
+        "p95_symbols": 50
+      },
+      "ascii_frame_wins": {
+        "0": 219,
+        "16": 1,
+        "20": 1,
+        "22": 10
+      },
+      "mean_legacy_minus_adaptive_ascii_symbols": 0.08
+    },
+    "seen_more_than_100_times": {
+      "adaptive_ascii": {
+        "urls": 3523,
+        "mean_symbols": 26.679,
+        "median_symbols": 19,
+        "p95_symbols": 70
+      },
+      "adaptive_cjk": {
+        "urls": 3523,
+        "mean_symbols": 14.485,
+        "median_symbols": 10,
+        "p95_symbols": 37
+      },
+      "ascii_frame_wins": {
+        "0": 2025,
+        "16": 8,
+        "17": 330,
+        "18": 931,
+        "19": 178,
+        "20": 7,
+        "21": 43,
+        "22": 1
+      },
+      "mean_legacy_minus_adaptive_ascii_symbols": 5.514
+    },
+    "unseen_in_training": {
+      "adaptive_ascii": {
+        "urls": 452,
+        "mean_symbols": 38.462,
+        "median_symbols": 34,
+        "p95_symbols": 83
+      },
+      "adaptive_cjk": {
+        "urls": 452,
+        "mean_symbols": 20.726,
+        "median_symbols": 18,
+        "p95_symbols": 44
+      },
+      "ascii_frame_wins": {
+        "0": 445,
+        "20": 1,
+        "22": 6
+      },
+      "mean_legacy_minus_adaptive_ascii_symbols": 0.025
+    }
+  },
+  "privacy": "No individual corpus URLs or hostnames are stored in this report."
+}

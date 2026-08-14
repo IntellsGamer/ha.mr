@@ -1,0 +1,19 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "training": "not required; transform is fixed",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "transform": {
+    "https_token": "https%3A%2F%2F",
+    "http_token": "http%3A%2F%2F"
+  },
+  "totals": {
+    "urls": 4780,
+    "existing_symbols": 145856,
+    "best_symbols": 145853,
+    "urls_with_nested_encoded_protocol": 4,
+    "wins": 3,
+    "saved_symbols": 3
+  }
+}
