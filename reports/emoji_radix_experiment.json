@@ -1,0 +1,18 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "transport": {
+    "current_legacy_alphabet_symbols": 3953,
+    "proposed_radix": 2048,
+    "marker_overhead_symbols": 1
+  },
+  "parse_failures": 1069,
+  "note": "A full implementation must use this single-code-point alphabet for all newly emitted payloads; this measurement conservatively re-encodes the current winning integer.",
+  "totals": {
+    "urls": 3711,
+    "current_emoji_symbols": 68658,
+    "proposed_symbols_upper_bound": 78132
+  }
+}

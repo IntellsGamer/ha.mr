@@ -49,9 +49,14 @@ EMOJI_ALPHABET = tuple(OUTPUT_ALPHABET_EMOJI)
 # a fixed single-code-point set so arbitrary adjacent digits are prefix-safe.
 EMOJI_V1_ALPHABET = tuple(chr(0x1F300 + offset) for offset in range(1024))
 EMOJI_V1_MARKER = "〄"  # Outside the V0 and V1 emoji digit alphabets.
-# One-code-point Japanese/CJK display transport: 4,096 digits (12 bits/digit).
-# It is opt-in because URI serialisers commonly percent-encode non-ASCII text.
+# Historical one-code-point CJK transport. It stays frozen so existing links
+# remain decodable. Newly emitted CJK payloads use the marked V2 alphabet below.
 CJK_ALPHABET = tuple(chr(0x4E00 + offset) for offset in range(4096))
+# 16,384 consecutive Han ideographs give fourteen bits per visible digit. The
+# marker is outside both CJK digit ranges, making V2 unambiguous and allowing
+# the decoder to select the old alphabet for unmarked payloads automatically.
+CJK_V2_ALPHABET = tuple(chr(0x4E00 + offset) for offset in range(16_384))
+CJK_V2_MARKER = chr(0x9FFF)
 
 TLD_DECODE = {code: value for value, code in TLD_ENCODE.items()}
 SLD_DECODE = {code: value for value, code in SLD_ENCODE.items()}
@@ -458,6 +463,8 @@ def infer_alphabet(payload: str, *, qr: bool = False) -> Sequence[str]:
     """Choose the transport alphabet from a QR path or a text fragment."""
     if qr:
         return QR_ALPHABET
+    if payload.startswith(CJK_V2_MARKER):
+        return CJK_V2_ALPHABET
     if payload and all(character in CJK_ALPHABET for character in payload):
         return CJK_ALPHABET
     return EMOJI_ALPHABET if any(character not in ASCII_ALPHABET for character in payload) else ASCII_ALPHABET
@@ -552,11 +559,31 @@ def _uses_legacy_emoji_alphabet(alphabet: Sequence[str]) -> bool:
     return tuple(alphabet) == EMOJI_ALPHABET
 
 
+def _uses_cjk_v2_alphabet(alphabet: Sequence[str]) -> bool:
+    return tuple(alphabet) == CJK_V2_ALPHABET
+
+
+def _output_transport(alphabet: Sequence[str]) -> tuple[Sequence[str], str]:
+    """Return the prefix-safe digit alphabet and any required transport marker."""
+    if _uses_legacy_emoji_alphabet(alphabet):
+        return EMOJI_V1_ALPHABET, EMOJI_V1_MARKER
+    if _uses_cjk_v2_alphabet(alphabet):
+        return CJK_V2_ALPHABET, CJK_V2_MARKER
+    return alphabet, ""
+
+
 def _v1_transport(payload: str, alphabet: Sequence[str]) -> tuple[str, Sequence[str]]:
     if payload.startswith(EMOJI_V1_MARKER):
         if not _uses_legacy_emoji_alphabet(alphabet):
             raise CodecError("Unexpected V1 emoji transport marker.")
         return payload[len(EMOJI_V1_MARKER):], EMOJI_V1_ALPHABET
+    if payload.startswith(CJK_V2_MARKER):
+        if tuple(alphabet) not in {CJK_ALPHABET, CJK_V2_ALPHABET}:
+            raise CodecError("Unexpected CJK V2 transport marker.")
+        return payload[len(CJK_V2_MARKER):], CJK_V2_ALPHABET
+    # Explicit CJK mode must keep accepting unmarked historical base-4096 links.
+    if _uses_cjk_v2_alphabet(alphabet):
+        return payload, CJK_ALPHABET
     return payload, alphabet
 
 
@@ -564,17 +591,17 @@ def _pack_adaptive_frame(version: int, stream: bytes, method: int, alphabet: Seq
     frame = bytes((version, method)) + stream
     # The leading one byte preserves zero bytes during integer conversion.
     value = int.from_bytes(b"\x01" + frame, "big")
-    transport = EMOJI_V1_ALPHABET if _uses_legacy_emoji_alphabet(alphabet) else alphabet
+    transport, marker = _output_transport(alphabet)
     payload = _number_to_string((value << 1) | 1, transport)
-    return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
+    return marker + payload
 
 
 def _pack_direct_frame(version: int, value: bytes, alphabet: Sequence[str]) -> str:
     """Pack a historical fixed-layout adaptive frame that has no method byte."""
     packed = int.from_bytes(b"\x01" + bytes((version,)) + value, "big")
-    transport = EMOJI_V1_ALPHABET if _uses_legacy_emoji_alphabet(alphabet) else alphabet
+    transport, marker = _output_transport(alphabet)
     payload = _number_to_string((packed << 1) | 1, transport)
-    return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
+    return marker + payload
 
 
 def _pack_compact_frame(version: int, stream: bytes, method: int, alphabet: Sequence[str]) -> str:
@@ -582,9 +609,9 @@ def _pack_compact_frame(version: int, stream: bytes, method: int, alphabet: Sequ
     if version not in _COMPACT_VERSIONS:
         raise CodecError("Unknown compact adaptive frame version.")
     packed = int.from_bytes(bytes((version, method)) + stream, "big")
-    transport = EMOJI_V1_ALPHABET if _uses_legacy_emoji_alphabet(alphabet) else alphabet
+    transport, marker = _output_transport(alphabet)
     payload = _number_to_string((packed << 1) | 1, transport)
-    return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
+    return marker + payload
 
 
 def _pack_compact_direct_frame(version: int, value: bytes, alphabet: Sequence[str]) -> str:
@@ -592,9 +619,9 @@ def _pack_compact_direct_frame(version: int, value: bytes, alphabet: Sequence[st
     if version != _COMPACT_DIRECT_VERSION:
         raise CodecError("Unknown compact direct frame version.")
     packed = int.from_bytes(bytes((version,)) + value, "big")
-    transport = EMOJI_V1_ALPHABET if _uses_legacy_emoji_alphabet(alphabet) else alphabet
+    transport, marker = _output_transport(alphabet)
     payload = _number_to_string((packed << 1) | 1, transport)
-    return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
+    return marker + payload
 
 
 def _adaptive_unpack(payload: str, alphabet: Sequence[str]) -> str:
@@ -670,8 +697,8 @@ def adaptive_payload_version(payload: str, alphabet: Sequence[str]) -> int:
 
 
 def payload_symbol_count(payload: str, alphabet: Sequence[str]) -> int:
-    """Count visible transport digits, including the V1 emoji format marker."""
-    if payload.startswith(EMOJI_V1_MARKER):
+    """Count visible transport digits, including any V1/V2 transport marker."""
+    if payload.startswith((EMOJI_V1_MARKER, CJK_V2_MARKER)):
         body, transport = _v1_transport(payload, alphabet)
         return 1 + _symbol_count(body, transport)
     try:
@@ -704,12 +731,15 @@ def compress_adaptive(input_url: str, alphabet: Sequence[str] = ASCII_ALPHABET) 
         raise CodecError("Only absolute HTTP(S) URLs are supported.")
     candidates: list[tuple[str, int]] = []
     try:
-        legacy = compress(normalised, alphabet)
+        legacy_raw = compress(normalised, alphabet)
         # The old rich emoji alphabet is not prefix-free for arbitrary long
         # streams. Keep a V0 emoji candidate only if its legacy decoder can
         # parse it; V1 emoji is always safe and otherwise takes over.
         if _uses_legacy_emoji_alphabet(alphabet):
-            decompress(legacy, alphabet)
+            decompress(legacy_raw, alphabet)
+        # V0 emoji output must retain its original rich alphabet verbatim.
+        # Only CJK V2 needs a marker because it replaces the historical radix.
+        legacy = (CJK_V2_MARKER + legacy_raw) if _uses_cjk_v2_alphabet(alphabet) else legacy_raw
         candidates.append((legacy, payload_symbol_count(legacy, alphabet)))
     except (CodecError, ValueError):
         pass
@@ -787,7 +817,10 @@ def compress_adaptive(input_url: str, alphabet: Sequence[str] = ASCII_ALPHABET) 
 
 def decompress_adaptive(payload: str, alphabet: Sequence[str] = ASCII_ALPHABET) -> str:
     """Decode legacy V0, historical adaptive frames, or compact V16+ frames."""
-    return _adaptive_unpack(payload, alphabet) if is_v1_payload(payload, alphabet) else decompress(payload, alphabet)
+    if is_v1_payload(payload, alphabet):
+        return _adaptive_unpack(payload, alphabet)
+    body, transport = _v1_transport(payload, alphabet)
+    return decompress(body, transport)
 
 
 def adaptive_alphabet(name: str) -> Sequence[str]:
@@ -795,7 +828,7 @@ def adaptive_alphabet(name: str) -> Sequence[str]:
     transports = {
         "ascii": ASCII_ALPHABET,
         "emoji": EMOJI_ALPHABET,
-        "cjk": CJK_ALPHABET,
+        "cjk": CJK_V2_ALPHABET,
         "qr": QR_ALPHABET,
     }
     try:

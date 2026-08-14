@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT))
 
 from ha_mr.codec import (  # noqa: E402
     ASCII_ALPHABET,
-    CJK_ALPHABET,
+    CJK_V2_ALPHABET,
     EMOJI_ALPHABET,
     CodecError,
     compress,
@@ -69,7 +69,7 @@ def main() -> None:
         except (CodecError, ValueError):
             legacy = None
 
-        for name, alphabet in (("ascii", ASCII_ALPHABET), ("emoji", EMOJI_ALPHABET), ("cjk", CJK_ALPHABET)):
+        for name, alphabet in (("ascii", ASCII_ALPHABET), ("emoji", EMOJI_ALPHABET), ("cjk", CJK_V2_ALPHABET)):
             try:
                 payload = compress_adaptive(url, alphabet)
                 decoded = decompress_adaptive(payload, alphabet)

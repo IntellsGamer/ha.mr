@@ -17,6 +17,8 @@ from ha_mr.semantic import transform as semantic_transform
 from ha_mr.codec import (
     ASCII_ALPHABET,
     CJK_ALPHABET,
+    CJK_V2_ALPHABET,
+    CJK_V2_MARKER,
     EMOJI_ALPHABET,
     adaptive_payload_version,
     compress,
@@ -112,11 +114,20 @@ class AdaptiveCodecTests(unittest.TestCase):
         self.assertGreater(payload_symbol_count(payload, EMOJI_ALPHABET), 1)
         self.assertEqual(decompress_adaptive(payload, EMOJI_ALPHABET), LONG_TAIL_URL)
 
-    def test_cjk_transport_is_one_code_point_per_symbol_and_auto_detects(self) -> None:
+    def test_historical_cjk_transport_remains_one_code_point_per_symbol_and_auto_detects(self) -> None:
         payload = compress_adaptive(LONG_TAIL_URL, CJK_ALPHABET)
         self.assertTrue(all(symbol in CJK_ALPHABET for symbol in payload))
         self.assertIs(infer_alphabet(payload), CJK_ALPHABET)
-        self.assertEqual(decompress_adaptive(payload, CJK_ALPHABET), LONG_TAIL_URL)
+        self.assertEqual(decompress_adaptive(payload, CJK_V2_ALPHABET), LONG_TAIL_URL)
+
+    def test_cjk_v2_transport_is_marked_and_beats_historical_radix(self) -> None:
+        historical = compress_adaptive(LONG_TAIL_URL, CJK_ALPHABET)
+        payload = compress_adaptive(LONG_TAIL_URL, CJK_V2_ALPHABET)
+        self.assertTrue(payload.startswith(CJK_V2_MARKER))
+        self.assertTrue(all(symbol in CJK_V2_ALPHABET for symbol in payload[1:]))
+        self.assertIs(infer_alphabet(payload), CJK_V2_ALPHABET)
+        self.assertLess(payload_symbol_count(payload, CJK_V2_ALPHABET), payload_symbol_count(historical, CJK_ALPHABET))
+        self.assertEqual(decompress_adaptive(payload, CJK_V2_ALPHABET), LONG_TAIL_URL)
 
 
 class AdaptiveASGITests(unittest.TestCase):
@@ -132,7 +143,8 @@ class AdaptiveASGITests(unittest.TestCase):
         compressed = self.client.post("/api/compress", json={"url": LONG_TAIL_URL, "mode": "cjk"})
         self.assertEqual(compressed.status_code, 200)
         payload = compressed.json()["payload"]
-        self.assertTrue(all(symbol in CJK_ALPHABET for symbol in payload))
+        self.assertTrue(payload.startswith(CJK_V2_MARKER))
+        self.assertTrue(all(symbol in CJK_V2_ALPHABET for symbol in payload[1:]))
         decoded = self.client.post("/api/decompress", json={"payload": payload, "mode": "auto"})
         self.assertEqual(decoded.status_code, 200)
         self.assertEqual(decoded.json()["url"], LONG_TAIL_URL)

@@ -1,0 +1,19 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "transport": {
+    "current_radix": 4096,
+    "proposed_radix": 16384,
+    "marker_overhead_symbols": 1
+  },
+  "note": "This is a conservative upper bound because it only re-encodes the current base-4096 winner; a full base-16384 adaptive search can select an equal or smaller candidate.",
+  "totals": {
+    "urls": 4780,
+    "current_cjk_symbols": 78501,
+    "proposed_symbols_upper_bound": 72478,
+    "wins": 2594,
+    "saved_symbols": 6390
+  }
+}
