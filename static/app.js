@@ -167,6 +167,7 @@
       window.location.replace(window.HaMrBrowserCodec.decompressAuto(payload));
     } catch (error) {
       setCodecStatus({ stage: "error", message: "Client codec could not decode this link. Select server-side Python to retry." });
+      setVisibleApplication();
       showCodecError("Client-side decoder is unavailable");
       console.error(error);
     }
@@ -219,8 +220,10 @@
     });
     qrSetting.addEventListener("change", () => { void updateOutput(); });
     qrCodeCorrectionLevelElement.addEventListener("change", () => { void updateOutput(); });
-    setVisibleApplication();
+    // A short fragment link stays on the default spinner until it redirects.
+    // Ordinary visits reveal the interface immediately and prepare the codec in the background.
     if (await resolveFragment()) return;
+    setVisibleApplication();
     void ensureClientCodec().catch(() => {});
     await updateOutput();
   }
