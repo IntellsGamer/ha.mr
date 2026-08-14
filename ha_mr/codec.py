@@ -25,6 +25,8 @@ from .general_phrases import inverse as general_phrase_inverse
 from .general_phrases import transform as general_phrase_transform
 from .diverse_phrases import inverse as diverse_phrase_inverse
 from .diverse_phrases import transform as diverse_phrase_transform
+from .factorized_grammar import candidates as factorized_candidates
+from .factorized_grammar import inverse as factorized_inverse
 from .codec_data import (
     DOMAIN_ENCODE,
     OUTPUT_ALPHABET_ASCII,
@@ -468,6 +470,7 @@ _V4_VERSION = 4
 _V5_VERSION = 5
 _V7_VERSION = 7
 _V8_VERSION = 8
+_V11_VERSION = 11
 _V1_METHOD_RAW = 0
 _V1_METHOD_STATIC = 1
 _MAX_V1_URL_BYTES = 65_536
@@ -555,7 +558,7 @@ def _adaptive_unpack(payload: str, alphabet: Sequence[str]) -> str:
         raise CodecError("Payload is not an adaptive frame.")
     value = number >> 1
     raw = value.to_bytes((value.bit_length() + 7) // 8, "big")
-    if len(raw) < 3 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION, _V4_VERSION, _V5_VERSION, _V7_VERSION, _V8_VERSION}:
+    if len(raw) < 3 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION, _V4_VERSION, _V5_VERSION, _V7_VERSION, _V8_VERSION, _V11_VERSION}:
         raise CodecError("Invalid adaptive frame header.")
     version = raw[1]
     try:
@@ -568,6 +571,11 @@ def _adaptive_unpack(payload: str, alphabet: Sequence[str]) -> str:
                 raise ValueError("truncated service-prefix frame")
             prefix_index, stream = stream[0], stream[1:]
             output = service_inverse(prefix_index, _inflate(stream, method))
+        elif version == _V11_VERSION:
+            if len(stream) < 2:
+                raise ValueError("truncated factorized grammar frame")
+            host_index, path_index, stream = stream[0], stream[1], stream[2:]
+            output = factorized_inverse(host_index, path_index, semantic_inverse(_inflate(stream, method)))
         else:
             output = _inflate(stream, method)
             if version == _V2_VERSION:
@@ -596,7 +604,7 @@ def adaptive_payload_version(payload: str, alphabet: Sequence[str]) -> int:
     if not number & 1:
         return 0
     raw = (number >> 1).to_bytes(((number >> 1).bit_length() + 7) // 8, "big")
-    if len(raw) < 3 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION, _V4_VERSION, _V5_VERSION, _V7_VERSION, _V8_VERSION}:
+    if len(raw) < 3 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION, _V4_VERSION, _V5_VERSION, _V7_VERSION, _V8_VERSION, _V11_VERSION}:
         raise CodecError("Invalid adaptive frame header.")
     return raw[1]
 
@@ -702,11 +710,21 @@ def compress_adaptive(input_url: str, alphabet: Sequence[str] = ASCII_ALPHABET) 
         for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
             payload = _pack_adaptive_frame(_V8_VERSION, _deflate(diverse_semantic, method), method, alphabet)
             candidates.append((payload, payload_symbol_count(payload, alphabet)))
+
+    # V11 composes independent frozen host and path/query-prefix tables. Unlike
+    # a single service table, their two-byte index pair covers useful host/path
+    # combinations without requiring a redirect database or per-URL state.
+    for host_index, path_index, suffix in factorized_candidates(encoded):
+        suffix_semantic = semantic_transform(suffix, opaque_tokens=True)
+        for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
+            stream = bytes((host_index, path_index)) + _deflate(suffix_semantic, method)
+            payload = _pack_adaptive_frame(_V11_VERSION, stream, method, alphabet)
+            candidates.append((payload, payload_symbol_count(payload, alphabet)))
     return min(candidates, key=lambda item: item[1])[0]
 
 
 def decompress_adaptive(payload: str, alphabet: Sequence[str] = ASCII_ALPHABET) -> str:
-    """Decode legacy V0 or an adaptive V1–V5/V7/V8 frame."""
+    """Decode legacy V0 or an adaptive V1–V5/V7/V8/V11 frame."""
     return _adaptive_unpack(payload, alphabet) if is_v1_payload(payload, alphabet) else decompress(payload, alphabet)
 
 

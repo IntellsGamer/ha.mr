@@ -82,6 +82,14 @@ class AdaptiveCodecTests(unittest.TestCase):
         self.assertEqual(diverse_phrase_inverse(diverse), url)
         self.assertTrue(general != url or diverse != url)
 
+    def test_v11_factorized_general_grammar_shrinks_and_round_trips(self) -> None:
+        url = "https://www.reddit.com/r/AskReddit/wiki/index#rules"
+        legacy = compress(url, ASCII_ALPHABET)
+        payload = compress_adaptive(url, ASCII_ALPHABET)
+        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 11)
+        self.assertLess(payload_symbol_count(payload, ASCII_ALPHABET), payload_symbol_count(legacy, ASCII_ALPHABET))
+        self.assertEqual(decompress_adaptive(payload, ASCII_ALPHABET), url)
+
     def test_v2_semantic_frame_beats_v1_for_opaque_shared_link_shape(self) -> None:
         url = (
             "https://example.com/redirect/12345678901234567890?next=https%3A%2F%2Fnews.example%2F"
