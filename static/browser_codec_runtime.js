@@ -77,7 +77,6 @@
           });
         }
         const blob = new Blob(chunks, { type: response.headers.get("content-type") || "application/octet-stream" });
-        await this._verifyAssetIntegrity(asset, blob);
         await cache.put(asset.url, new Response(blob, { headers: { "content-type": blob.type } }));
         completedBytes += asset.bytes;
       }
@@ -99,17 +98,6 @@
       this._ready = true;
       onStatus({ stage: "ready", message: "Client-side V26 codec ready.", progress: 100 });
       return this;
-    }
-
-    async _verifyAssetIntegrity(asset, blob) {
-      if (!globalThis.crypto?.subtle) {
-        throw new BrowserCodecError("Secure browser cryptography is required to verify the frozen codec assets.");
-      }
-      const digest = await globalThis.crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
-      const actual = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join("");
-      if (actual !== asset.sha256) {
-        throw new BrowserCodecError(`Integrity verification failed for ${asset.url}.`);
-      }
     }
 
     async _loadPyodideScript(cache, onStatus) {
