@@ -59,6 +59,47 @@ class ASGIApplicationTests(unittest.TestCase):
         self.assertIn('id="input-link"', response.text)
         self.assertIn("static/app.js", response.text)
 
+    def test_index_negotiates_terminal_json_and_crawler_responses(self) -> None:
+        terminal = self.client.get("/", headers={"user-agent": "curl/8.7.1", "accept": "*/*"})
+        self.assertEqual(terminal.status_code, 200)
+        self.assertTrue(terminal.headers["content-type"].startswith("text/plain"))
+        self.assertIn("self-contained URL compressor", terminal.text)
+
+        json_response = self.client.get("/", headers={"accept": "application/json"})
+        self.assertEqual(json_response.status_code, 200)
+        self.assertEqual(json_response.json()["service"], "ha.mr")
+
+        crawler = self.client.get("/", headers={"user-agent": "Discordbot/2.0", "accept": "text/html"})
+        self.assertEqual(crawler.status_code, 200)
+        self.assertTrue(crawler.headers["content-type"].startswith("text/html"))
+        self.assertIn('property="og:title"', crawler.text)
+        self.assertIn("ha.mr — self-contained URL compressor", crawler.text)
+
+    def test_qr_short_link_negotiates_terminal_json_and_crawler_responses(self) -> None:
+        destination = "https://example.com/docs/guide?ref=ha#intro"
+        payload = compress(destination, QR_ALPHABET)
+        path = f"/{payload}"
+
+        browser = self.client.get(path, follow_redirects=False)
+        self.assertEqual(browser.status_code, 302)
+        self.assertEqual(browser.headers["location"], destination)
+
+        terminal = self.client.get(path, headers={"user-agent": "curl/8.7.1", "accept": "*/*"})
+        self.assertEqual(terminal.status_code, 200)
+        self.assertTrue(terminal.headers["content-type"].startswith("text/plain"))
+        self.assertEqual(terminal.text.splitlines(), [destination])
+
+        json_response = self.client.get(path, headers={"accept": "application/json"})
+        self.assertEqual(json_response.status_code, 200)
+        self.assertEqual(json_response.json(), {"url": destination})
+
+        crawler = self.client.get(path, headers={"user-agent": "Discordbot/2.0", "accept": "text/html"})
+        self.assertEqual(crawler.status_code, 200)
+        self.assertTrue(crawler.headers["content-type"].startswith("text/html"))
+        self.assertIn('property="og:title"', crawler.text)
+        self.assertIn(destination, crawler.text)
+        self.assertEqual(crawler.headers["vary"], "Accept, User-Agent")
+
     def test_offline_worker_is_root_scoped_and_no_cache(self) -> None:
         response = self.client.get("/offline_sw.js")
         self.assertEqual(response.status_code, 200)

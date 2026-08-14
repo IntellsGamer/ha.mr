@@ -8,6 +8,7 @@ asyncio event loop handling other requests.
 from __future__ import annotations
 
 import asyncio
+import html
 import os
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -39,6 +40,35 @@ SERVER_RATE_LIMIT_REFILL_PER_SECOND = SERVER_RATE_LIMIT_REQUESTS / SERVER_RATE_L
 SERVER_RATE_LIMIT_MAX_CLIENTS = max(100, int(os.environ.get("HA_MR_SERVER_RATE_LIMIT_MAX_CLIENTS", "10000")))
 SERVER_RATE_LIMIT_BUCKETS: dict[str, tuple[float, float]] = {}
 SERVER_RATE_LIMIT_LOCK = Lock()
+_CRAWLER_USER_AGENT_MARKERS = (
+    "discordbot",
+    "discord/",
+    "slackbot",
+    "twitterbot",
+    "facebookexternalhit",
+    "facebot",
+    "linkedinbot",
+    "telegrambot",
+    "whatsapp",
+    "googlebot",
+    "bingbot",
+    "yandexbot",
+    "duckduckbot",
+    "applebot",
+    "baiduspider",
+    "crawler",
+    "spider",
+    "preview",
+)
+_TERMINAL_USER_AGENT_MARKERS = (
+    "curl/",
+    "wget/",
+    "httpie/",
+    "python-requests/",
+    "go-http-client/",
+    "powershell/",
+)
+_RESPONSE_VARY_HEADERS = {"Vary": "Accept, User-Agent"}
 
 
 @asynccontextmanager
@@ -54,6 +84,65 @@ templates = Jinja2Templates(directory=ROOT / "templates")
 
 def _base_url(request: Request) -> str:
     return str(request.base_url).rstrip("/")
+
+
+def _user_agent(request: Request) -> str:
+    return request.headers.get("user-agent", "").lower()
+
+
+def _is_crawler(request: Request) -> bool:
+    user_agent = _user_agent(request)
+    return any(marker in user_agent for marker in _CRAWLER_USER_AGENT_MARKERS)
+
+
+def _is_terminal_client(request: Request) -> bool:
+    user_agent = _user_agent(request)
+    return any(marker in user_agent for marker in _TERMINAL_USER_AGENT_MARKERS)
+
+
+def _wants_json(request: Request) -> bool:
+    return "application/json" in request.headers.get("accept", "").lower()
+
+
+def _crawler_preview(request: Request, *, title: str, description: str, destination: str | None = None) -> HTMLResponse:
+    """Return a compact crawler-only document with standards-compatible OG metadata."""
+    canonical_url = f"{_base_url(request)}{request.url.path}"
+    escaped_title = html.escape(title, quote=True)
+    escaped_description = html.escape(description[:512], quote=True)
+    escaped_canonical = html.escape(canonical_url, quote=True)
+    escaped_destination = html.escape(destination or canonical_url, quote=True)
+    document = (
+        "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+        f"<title>{escaped_title}</title>"
+        f"<meta property=\"og:title\" content=\"{escaped_title}\">"
+        f"<meta property=\"og:description\" content=\"{escaped_description}\">"
+        f"<meta property=\"og:type\" content=\"website\">"
+        f"<meta property=\"og:url\" content=\"{escaped_canonical}\">"
+        f"<meta name=\"twitter:card\" content=\"summary\">"
+        f"<meta name=\"twitter:title\" content=\"{escaped_title}\">"
+        f"<meta name=\"twitter:description\" content=\"{escaped_description}\">"
+        "</head><body>"
+        f"<p>{escaped_title}</p><p>{escaped_description}</p>"
+        f"<a href=\"{escaped_destination}\">Continue</a>"
+        "</body></html>"
+    )
+    return HTMLResponse(document, headers=_RESPONSE_VARY_HEADERS)
+
+
+def _destination_response(request: Request, destination: str) -> RedirectResponse | JSONResponse | PlainTextResponse | HTMLResponse:
+    """Negotiate decoded short-link responses without changing normal browser behavior."""
+    if _wants_json(request):
+        return JSONResponse({"url": destination}, headers=_RESPONSE_VARY_HEADERS)
+    if _is_crawler(request):
+        return _crawler_preview(
+            request,
+            title="ha.mr link preview",
+            description=destination,
+            destination=destination,
+        )
+    if _is_terminal_client(request):
+        return PlainTextResponse(f"{destination}\n", headers=_RESPONSE_VARY_HEADERS)
+    return RedirectResponse(destination, status_code=302, headers=_RESPONSE_VARY_HEADERS)
 
 
 def _text(value: Any, *, field: str) -> str:
@@ -128,9 +217,25 @@ async def offline_service_worker() -> FileResponse:
     )
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request) -> HTMLResponse:
-    """Serve the ha.mr-style page; fragments are resolved by the browser bridge."""
+@app.get("/", response_class=HTMLResponse, response_model=None)
+async def index(request: Request) -> HTMLResponse | JSONResponse | PlainTextResponse:
+    """Serve the normal page, or lightweight negotiated metadata for non-browsers."""
+    if _wants_json(request):
+        return JSONResponse(
+            {"service": "ha.mr", "description": "Self-contained URL compressor. No redirect database."},
+            headers=_RESPONSE_VARY_HEADERS,
+        )
+    if _is_crawler(request):
+        return _crawler_preview(
+            request,
+            title="ha.mr — self-contained URL compressor",
+            description="Self-contained links. No redirect database.",
+        )
+    if _is_terminal_client(request):
+        return PlainTextResponse(
+            "ha.mr — self-contained URL compressor. No redirect database.\n",
+            headers=_RESPONSE_VARY_HEADERS,
+        )
     return templates.TemplateResponse(request=request, name="index.html")
 
 
@@ -158,12 +263,12 @@ async def api_decompress(request: Request) -> JSONResponse:
     return JSONResponse({"url": await _cpu(decode_payload, payload, mode)})
 
 
-@app.get("/resolve")
-async def resolve_fragment_payload(request: Request, payload: str = "") -> RedirectResponse:
-    """Receive browser-only fragments through a query bridge and redirect once decoded."""
+@app.get("/resolve", response_model=None)
+async def resolve_fragment_payload(request: Request, payload: str = "") -> RedirectResponse | JSONResponse | PlainTextResponse | HTMLResponse:
+    """Receive browser-only fragments through a query bridge and negotiate the decoded response."""
     await _enforce_server_rate_limit(request)
     destination = await _cpu(decode_payload, _text(payload.replace(" ", ""), field="payload"), "auto")
-    return RedirectResponse(destination, status_code=302)
+    return _destination_response(request, destination)
 
 
 @app.post("/api/qr")
@@ -190,11 +295,11 @@ async def healthz() -> JSONResponse:
 
 
 @app.get("/{payload:path}", response_model=None)
-async def resolve_qr_payload(request: Request, payload: str) -> RedirectResponse | PlainTextResponse:
+async def resolve_qr_payload(request: Request, payload: str) -> RedirectResponse | JSONResponse | PlainTextResponse | HTMLResponse:
     """Decode QR-mode path payloads without creating server-side link state."""
     await _enforce_server_rate_limit(request)
     try:
         destination = await _cpu(decode_payload, _text(payload, field="payload"), "qr")
     except HTTPException:
         return PlainTextResponse("Unknown ha.mr payload", status_code=404)
-    return RedirectResponse(destination, status_code=302)
+    return _destination_response(request, destination)
