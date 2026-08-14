@@ -4,59 +4,67 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ha.mr - link compressor</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}?v=v26-browser-3">
 </head>
 <body>
+  <div id="loader" aria-hidden="true"></div>
 
-  <div id="loader"></div>
+  <main id="content" class="app-shell">
+    <header class="brand">
+      <h1 class="title">ha<span>.</span>mr</h1>
+      <p class="subtitle">(read: "hammer")</p>
+    </header>
 
-  <div id="content">
+    <section class="compressor" aria-label="Link compressor">
+      <label class="sr-only" for="input-link">Long link to compress</label>
+      <input type="text" id="input-link" placeholder="Paste a long link…" autofocus autocomplete="url" spellcheck="false">
 
-    <h1 class="title">ha.mr</h1>
-    <p class="subtitle">(read: "hammer")</p>
+      <details id="query-warning">
+        <summary>Consider removing parameters</summary>
+        <p>Some links include tracking or page-state query parameters marked by <code>?</code> and <code>&amp;</code>. Removing unnecessary parameters can make a link much shorter without changing where it goes.</p>
+      </details>
 
-    <input type="text" id="input-link" placeholder="https://some-long.link/" autofocus>
-    <details id="query-warning">
-      <summary>Consider removing parameters...</summary>
-      <br>
-      Some links include data that isn't necessary for the link to function,
-      such as tracking information or page state. This data comes in the
-      form of <i>query parameters</i>, marked by "?" and "&amp;" characters.
-      <br><br>
-      Removing these segments can sometimes significantly shorten the link
-      without breaking it. For example, an Amazon product link contains a lot
-      of tracking information. Everything past the "?" symbol can be safely
-      removed, making the link much shorter.
-    </details>
-    <p id="output-link-container">
-      <a id="output-link" target="_blank">Enter a link above to compress</a>
-      <br><span id="output-ratio">&nbsp;</span>
-    </p>
+      <div id="output-link-container">
+        <a id="output-link" target="_blank" rel="noopener">Enter a link above to compress</a>
+        <span id="output-ratio">&nbsp;</span>
+      </div>
+    </section>
 
     <img width="256" height="256" id="qrcode" alt="Generated QR code">
-
-    <span id="qr-correct-level-container">
-      <label>QR code error correction threshold</label>
-      <br>
+    <div id="qr-correct-level-container" class="qr-settings">
+      <label for="qr-correct-level">QR error correction</label>
       <input type="range" name="qr-correct-level" id="qr-correct-level" autocomplete="off" min="0" max="3" value="1">
-    </span>
+    </div>
 
-    <span style="margin-top:20px">
-      <label for="settings-transport">Text output alphabet</label><br>
-      <select id="settings-transport" name="settings-transport" autocomplete="off">
-        <option value="ascii">ASCII (most compatible)</option>
-        <option value="emoji">Emoji (dense display)</option>
-        <option value="cjk">Japanese/CJK (highest density)</option>
-      </select><br>
-    </span>
-    <span>
-      <input type="checkbox" id="settings-qr" name="settings-qr" autocomplete="off">
-      <label for="settings-qr"> Output QR code</label><br>
-    </span>
-    <br><br>
+    <section class="settings" aria-label="Codec settings">
+      <div class="setting-row">
+        <label for="settings-execution">Run codec</label>
+        <select id="settings-execution" name="settings-execution" autocomplete="off">
+          <option value="client" selected>Client-side V26</option>
+          <option value="server">Server-side Python</option>
+        </select>
+      </div>
+      <small id="codec-status" role="status" aria-live="polite">Preparing client-side V26 codec…</small>
 
-  </div>
+      <div class="setting-row">
+        <label for="settings-transport">Output alphabet</label>
+        <select id="settings-transport" name="settings-transport" autocomplete="off">
+          <option value="ascii">ASCII</option>
+          <option value="emoji">Emoji</option>
+          <option value="cjk">Japanese/CJK</option>
+        </select>
+      </div>
 
-  <script src="{{ url_for('static', path='app.js') }}"></script>
+      <label class="checkbox-row" for="settings-qr">
+        <input type="checkbox" id="settings-qr" name="settings-qr" autocomplete="off">
+        <span>Generate QR code</span>
+      </label>
+    </section>
+
+    <footer>Self-contained links. No redirect database.</footer>
+  </main>
+
+  <script src="{{ url_for('static', path='browser_codec_runtime.js') }}?v=v26-browser-3"></script>
+  <script src="{{ url_for('static', path='app.js') }}?v=v26-browser-3"></script>
 </body>
 </html>

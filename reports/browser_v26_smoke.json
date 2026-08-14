@@ -1,0 +1,8 @@
+{
+  "runtime": "Pyodide 0.26.3 self-hosted under /static/pyodide/0.26.3/",
+  "codec_revision": "38a89e72be0c1cca556f",
+  "result": "Browser runtime initialized, unpacked the frozen V26 codec archive, passed its complete public conformance corpus, and emitted a local ASCII payload.",
+  "browser_runtime_ready": true,
+  "ui_initial_state": "The served page exposes Client-side V26 as the selected default and displays a progressive preparation status while the runtime initializes.",
+  "verification": "The client bridge checks exact ASCII, emoji, and marked CJK V2 payload strings for five public vectors, exact decoded URLs, and a historical V5 payload before becoming ready."
+}

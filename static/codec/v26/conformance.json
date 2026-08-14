@@ -1,0 +1,49 @@
+{
+  "vectors": [
+    {
+      "url": "https://manus.im/docs/agents?mode=asgi",
+      "payloads": {
+        "ascii": "[8cB=VgoOloip&eC?E:2s]5sn(",
+        "emoji": "😢👩🏾‍🐰‍👩🏼🚶🏼‍♂️‍➡️✊🏾🐒🚣🏿‍♂️🧑‍🧑‍🧒🀄🇬🇹🛘😫🇦🇮🈵👨🏾‍❤️‍👨🏽",
+        "cjk": "鿿西斑弝豀寻畓臇禥子痵缢使"
+      }
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=Xic_cDYrtnM",
+      "payloads": {
+        "ascii": "+~Mub6=rd01I!",
+        "emoji": "〄🚘🙫😔🔅📺🍍🌮🎗",
+        "cjk": "鿿膘卵蘚屽僰亗"
+      }
+    },
+    {
+      "url": "https://example.com/redirect/12345678901234567890?next=https%3A%2F%2Fnews.example%2Fa%20b&id=1ae03060-3f06-4a5c-9ac6-b5c1b4a62664&token=QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo",
+      "payloads": {
+        "ascii": "+UgSC/SO:.wi,!VlUG1=@2flw19;B8DHzk_;U.G0OZrUx$OH;081=Vrg3#)exj:TzVep)&Iq-Q#&xHHql]Wj-ywD+*Zn)KKoXzwZ:BiFc4-mp]K#c?:/;8iFw['JwhZq[9&P$H9Bvx+",
+        "emoji": "〄🌀🌓🐘🚃👠🍧🌑🐆💀🚿🛾🗸🔽🚶📤🍹🗭🚚🗩😷🕍🎢🎤🚲🗽🏦🕔🍪🖉🔕🕈🗤🌼🛚😷🏁👞💚🎎🌗🌆📩🛴😈📔👟🐬🌩💇🛼🖘💉🕩📟🖼👶🛢🎟🐨🔱🗙🙈🌃🚴🎖🏖👮🕺🏊🐱🔦🔔🕈📦💞🗁🌌🏙🌟🌎🔠🗔😟🗐🔇🛦🙸🌎🌫",
+        "cjk": "鿿帀瞯獒姩戥箲婑斚舗榔帓凍爾绘棒葃欋筎伸虅豆既跄傂磹棐硃襞蓗哑伭奓密徉嫀舺唌崬脓夗砑屙弦胭椋仉盎癕滇曝斏彪襇朂赍匦珯秒熄臻侪嫮损姿"
+      }
+    },
+    {
+      "url": "https://example.com/redirect?next=https%3A%2F%2Fmanus.im%2Fdocs%3Fmode%3Dasgi",
+      "payloads": {
+        "ascii": "T&:*e/)Sc.c+;:;knOO(/[zi1ZF.)M:9gO+fr$kM:+5Hkb#7mMs8#",
+        "emoji": "〄🌀🙜📊📆🗈🎼🚺🍣🙧🛃🚖🙷🌾💑📕🐮👘🔆🔱🛋🎀🏑🚶🛦🏤🖼🚄🛇🛎🍩🚻🕫🛿🌊",
+        "cjk": "鿿舀胴攜讱覱湣缵属距期试摑瘜媋嘞櫑蟺憖厮認秎紅垲姿"
+      }
+    },
+    {
+      "url": "https://www.reddit.com/r/AskReddit/comments/24mzcw/what_is_the_most_interesting_fact_you_know/",
+      "payloads": {
+        "ascii": "PwGf+.1=$rC1!goCF'sd4[0LI.2Hl1uNar]E0syWm4@]7",
+        "emoji": "〄🌀🚸🔊🐀👶🏱🏫💝🔡🛫🙵🎨🙇🙟🏵📻🔓😼🎭🌶🛘🖰💍🕂🌤💘🌉🛿🌲",
+        "cjk": "鿿爀僺舅聜峂垝褡毚嘩萌绵匞竵蔪讏袰廗底塥跿串"
+      }
+    }
+  ],
+  "historical_decode": {
+    "payload": "oz~KA/;60*rw5",
+    "mode": "ascii",
+    "url": "https://www.youtube.com/watch?v=Xic_cDYrtnM"
+  }
+}

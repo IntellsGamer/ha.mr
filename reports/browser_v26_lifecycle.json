@@ -1,0 +1,18 @@
+{
+  "cache": {
+    "service_worker_scope": "/static/",
+    "active": true,
+    "codec_cache": "ha-mr-v26-e9a81e6aaa65fb7ad6ea",
+    "cached_assets": 7,
+    "assets": ["pyodide loader", "runtime bootstrap", "WebAssembly binary", "standard library", "lockfile", "V26 codec archive", "conformance corpus"]
+  },
+  "cold_start_validation": {
+    "cleared_prior_codec_caches": 1,
+    "unregistered_prior_static_worker": 1,
+    "result": "The page reinitialized the exact V26 client runtime successfully from a clean browser-cache state and returned to the ready status."
+  },
+  "fragment_resolution": {
+    "mode": "default client-side V26",
+    "result": "A V26 fragment URL was decoded in the browser and redirected to the exact encoded destination without the server resolver."
+  }
+}

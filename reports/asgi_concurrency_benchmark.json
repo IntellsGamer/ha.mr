@@ -3,11 +3,11 @@
   "concurrency": 32,
   "cpu_workers": 4,
   "successes": 200,
-  "elapsed_seconds": 1.2980700989992329,
-  "requests_per_second": 154.07488405610226,
+  "elapsed_seconds": 1.4050955090006028,
+  "requests_per_second": 142.3390785315749,
   "latency_ms": {
-    "median": 29.602874999909545,
-    "p95": 1119.4245249989763,
-    "max": 1138.4383860004164
+    "median": 34.20275400094397,
+    "p95": 1197.9613109997445,
+    "max": 1222.1688039990113
   }
 }

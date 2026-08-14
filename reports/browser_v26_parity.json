@@ -1,0 +1,9 @@
+{
+  "url_shape": "public nested redirect URL with percent-encoded destination",
+  "result": "The self-hosted browser V26 runtime emitted exactly the same payload strings as the live Python API and auto-decoded them exactly for all transports.",
+  "transports": {
+    "ascii": {"exact_payload_match": true, "exact_round_trip": true, "symbols": 53},
+    "emoji": {"exact_payload_match": true, "exact_round_trip": true, "symbols": 35},
+    "cjk": {"exact_payload_match": true, "exact_round_trip": true, "symbols": 25}
+  }
+}

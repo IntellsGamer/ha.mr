@@ -1,0 +1,47 @@
+{
+  "runtime": {
+    "version": "0.26.3",
+    "index_url": "/static/pyodide/0.26.3/"
+  },
+  "codec": {
+    "archive": {
+      "url": "/static/codec/v26/ha_mr_v26.zip",
+      "bytes": 142572,
+      "sha256": "e9a81e6aaa65fb7ad6eac9ab84ba553ce9a9ae88a47d312706cf9d187200980d"
+    },
+    "conformance": {
+      "url": "/static/codec/v26/conformance.json",
+      "bytes": 2660,
+      "sha256": "e4e45c469fb26027c76ca1f9dc7c67b0d85c424f0906837c43a49efea781ac0c"
+    },
+    "revision": "e9a81e6aaa65fb7ad6ea"
+  },
+  "runtime_assets": [
+    {
+      "url": "/static/pyodide/0.26.3/pyodide.js",
+      "bytes": 14767,
+      "sha256": "e64da7dbd4511d953a479bd080efebbf71d9e28baa2dae81f2d018f8d122e173"
+    },
+    {
+      "url": "/static/pyodide/0.26.3/pyodide.asm.js",
+      "bytes": 1228169,
+      "sha256": "cb2e861dbd3f8afe8a0c5a94a98c5f3ecea888041e51709160137152f9437920"
+    },
+    {
+      "url": "/static/pyodide/0.26.3/pyodide.asm.wasm",
+      "bytes": 10086131,
+      "sha256": "f3e05e60c6ddd981d765b89ee1234ed46e357b8eaa539eeed6a6256e9ccf392f"
+    },
+    {
+      "url": "/static/pyodide/0.26.3/python_stdlib.zip",
+      "bytes": 2341797,
+      "sha256": "aa81a96fccc7dcf0959b39c2b1ae445530005ea14a1b53eccda78f1d9dd2f779"
+    },
+    {
+      "url": "/static/pyodide/0.26.3/pyodide-lock.json",
+      "bytes": 106335,
+      "sha256": "6ce978607f5b03baebfaf60667da660153a4459282b1234c27daa8ba77358185"
+    }
+  ],
+  "cache_name": "ha-mr-v26-e9a81e6aaa65fb7ad6ea"
+}
