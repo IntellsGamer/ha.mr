@@ -1,64 +1,58 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ha.mr — Python URL compressor</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
-  </head>
-  <body>
-    <main class="card" aria-labelledby="site-title">
-      <header>
-        <h1 id="site-title">ha.mr</h1>
-        <p class="subtitle">Python/Flask reversible URL compressor</p>
-      </header>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ha.mr - link compressor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
 
-      <form method="post" novalidate>
-        <label for="url">Destination URL</label>
-        <input id="url" name="url" type="text" autocomplete="url" placeholder="https://some-long.link/" value="{{ result.input_url if result else '' }}" autofocus required>
+  <div id="loader"></div>
 
-        <fieldset>
-          <legend>Output options</legend>
-          <label class="choice"><input type="checkbox" name="emoji" {% if result and result.emoji %}checked{% endif %}> Encode a text link with the emoji alphabet</label>
-          <label class="choice"><input type="checkbox" name="qr" {% if result and result.qr_enabled %}checked{% endif %}> Generate a QR-optimised path link</label>
-          <label for="correction_level">QR error correction</label>
-          <select id="correction_level" name="correction_level">
-            {% for value, label in [(0, 'L — 7%'), (1, 'M — 15%'), (2, 'Q — 25%'), (3, 'H — 30%')] %}
-            <option value="{{ value }}" {% if result and result.correction_level == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </fieldset>
+  <div id="content">
 
-        <button type="submit">Compress URL</button>
-      </form>
+    <h1 class="title">ha.mr</h1>
+    <p class="subtitle">(read: "hammer")</p>
 
-      {% if error %}
-      <section class="message error" role="alert">{{ error }}</section>
-      {% endif %}
+    <input type="text" id="input-link" placeholder="https://some-long.link/" autofocus>
+    <details id="query-warning">
+      <summary>Consider removing parameters...</summary>
+      <br>
+      Some links include data that isn't necessary for the link to function,
+      such as tracking information or page state. This data comes in the
+      form of <i>query parameters</i>, marked by "?" and "&amp;" characters.
+      <br><br>
+      Removing these segments can sometimes significantly shorten the link
+      without breaking it. For example, an Amazon product link contains a lot
+      of tracking information. Everything past the "?" symbol can be safely
+      removed, making the link much shorter.
+    </details>
+    <p id="output-link-container">
+      <a id="output-link" target="_blank">Enter a link above to compress</a>
+      <br><span id="output-ratio">&nbsp;</span>
+    </p>
 
-      {% if result and result.compact_link %}
-      <section class="result" aria-live="polite">
-        <h2>Compressed link</h2>
-        <a href="{{ result.compact_link }}" target="_blank" rel="noreferrer">{{ result.compact_link }}</a>
-        {% if result.ratio > 0 %}
-          <p class="saving">Approximately {{ result.ratio|round|int }}% shorter than the normalised input.</p>
-        {% else %}
-          <p class="warning">This URL does not compress smaller; its payload remains fully reversible.</p>
-        {% endif %}
+    <img width="256" height="256" id="qrcode" alt="Generated QR code">
 
-        {% if result.qr_data_url %}
-        <div class="qr">
-          <h2>QR-optimised link</h2>
-          <img src="{{ result.qr_data_url }}" width="256" height="256" alt="QR code for compressed URL">
-          <a href="{{ result.qr_link }}" target="_blank" rel="noreferrer">{{ result.qr_link }}</a>
-        </div>
-        {% endif %}
-      </section>
-      {% endif %}
+    <span id="qr-correct-level-container">
+      <label>QR code error correction threshold</label>
+      <br>
+      <input type="range" name="qr-correct-level" id="qr-correct-level" autocomplete="off" min="0" max="3" value="1">
+    </span>
 
-      <footer>
-        <p>All compression and resolution logic is implemented in Python. The target URL is encoded into the payload; no redirect database is used.</p>
-      </footer>
-    </main>
-  </body>
+    <span style="margin-top:20px">
+      <input type="checkbox" id="settings-emoji" name="settings-emoji" autocomplete="off">
+      <label for="settings-emoji"> Use emoji in text output</label><br>
+    </span>
+    <span>
+      <input type="checkbox" id="settings-qr" name="settings-qr" autocomplete="off">
+      <label for="settings-qr"> Output QR code</label><br>
+    </span>
+    <br><br>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
 </html>

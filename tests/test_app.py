@@ -44,27 +44,43 @@ class FlaskTests(unittest.TestCase):
         app.config.update(TESTING=True)
         self.client = app.test_client()
 
-    def test_healthcheck(self) -> None:
-        response = self.client.get("/healthz")
+    def test_home_page_uses_original_interface_and_client_bridge(self) -> None:
+        response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json, {"status": "ok", "codec": "python"})
+        self.assertIn(b"(read: \"hammer\")", response.data)
+        self.assertIn(b'id="input-link"', response.data)
+        self.assertIn(b"static/app.js", response.data)
 
-    def test_json_api_and_qr_redirect(self) -> None:
-        url = "https://example.com/docs/guide?ref=ha#intro"
-        response = self.client.post("/api/compress", json={"url": url, "mode": "qr"})
+    def test_fragment_decoder_api_resolves_reference_payload(self) -> None:
+        response = self.client.post(
+            "/api/decompress",
+            json={"payload": "O,QnpHuemsiV2e_BfyZNRqhI!", "mode": "auto"},
+        )
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["url"], "https://example.com/docs/guide?ref=ha#intro")
+
+    def test_fragment_resolver_redirects_reference_payload(self) -> None:
+        response = self.client.get(
+            "/resolve?payload=O%2CQnpHuemsiV2e_BfyZNRqhI%21",
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "https://example.com/docs/guide?ref=ha#intro")
+
+    def test_qr_api_and_qr_redirect(self) -> None:
+        url = "https://example.com/docs/guide?ref=ha#intro"
+        response = self.client.post("/api/qr", json={"url": url, "correction_level": 1})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json["image"].startswith("data:image/png;base64,"))
         payload = response.json["payload"]
         redirect_response = self.client.get(f"/{payload}", follow_redirects=False)
         self.assertEqual(redirect_response.status_code, 302)
         self.assertEqual(redirect_response.headers["Location"], url)
 
-    def test_html_form_renders_qr_image(self) -> None:
-        response = self.client.post(
-            "/",
-            data={"url": "https://example.com/", "qr": "on", "correction_level": "1"},
-        )
+    def test_healthcheck(self) -> None:
+        response = self.client.get("/healthz")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"data:image/png;base64", response.data)
+        self.assertEqual(response.json, {"status": "ok", "codec": "python"})
 
 
 if __name__ == "__main__":

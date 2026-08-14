@@ -1,77 +1,129 @@
-:root {
-  color-scheme: light;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f5f7fb;
-  color: #151b2a;
-}
+@import url('https://fonts.googleapis.com/css2?family=Hammersmith+One&display=swap');
 
-* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
 
 body {
-  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 120%;
+}
+
+* {
+  font-family: "Hammersmith One", sans-serif;
+}
+
+#loader {
+  position: absolute;
+  border: 0.5em solid lightgray;
+  border-radius: 50%;
+  border-top: 0.5em solid gray;
+  width: 3em;
+  height: 3em;
+  -webkit-animation: spin 1.5s linear infinite;
+  animation: spin 1.5s linear infinite;
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 1s;
+}
+
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1s;
+}
+
+h1 {
   margin: 0;
-  display: grid;
-  place-items: center;
-  padding: 2rem 1rem;
 }
 
-.card {
-  width: min(100%, 46rem);
-  background: #fff;
-  border: 1px solid #dfe5ef;
-  border-radius: 1rem;
-  box-shadow: 0 1.25rem 3rem rgba(20, 35, 65, .10);
-  padding: clamp(1.5rem, 5vw, 3rem);
+p {
+  margin-top: 0;
 }
 
-header { text-align: center; margin-bottom: 2rem; }
-h1 { margin: 0; font-size: clamp(2.2rem, 7vw, 4.3rem); letter-spacing: -.09em; }
-.subtitle { margin: .25rem 0 0; color: #657089; }
-
-label, input, select, button { font: inherit; }
-label { display: block; font-weight: 650; margin-bottom: .5rem; }
-input[type="text"], select {
-  width: 100%;
-  border: 1px solid #bac4d5;
-  background: #fff;
-  border-radius: .5rem;
-  padding: .75rem .85rem;
+label {
+  font-size: 0.9em;
 }
 
-fieldset {
-  margin: 1.25rem 0;
-  padding: 1rem;
-  border: 1px solid #d9e0eb;
-  border-radius: .65rem;
+span {
+  text-align: center;
 }
-legend { color: #4d5870; padding: 0 .35rem; }
-.choice { font-weight: 400; margin: .65rem 0; }
-.choice input { margin-right: .5rem; }
-select { margin-top: .15rem; }
 
-button {
-  width: 100%;
+.title {
+  font-size: 2.5em;
+}
+
+.subtitle {
+  font-size: 0.6em;
+  margin-top: -10px;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+#input-link {
+  padding: 5px 8px;
   border: 0;
-  border-radius: .5rem;
-  padding: .8rem 1rem;
-  background: #2352d6;
-  color: #fff;
-  cursor: pointer;
-  font-weight: 700;
+  outline: 0;
+  border-bottom: 2px solid darkgray;
+  border-radius: 10px;
+  margin: 10px 0;
+  font-size: 16px;
+  background-color: rgb(230, 230, 230);
 }
-button:hover { background: #173ea9; }
 
-.message, .result {
-  margin-top: 1.5rem;
-  border-radius: .65rem;
-  padding: 1rem;
+#output-link-container {
+  margin: 10px 0 0 0;
+  text-align: center;
 }
-.error { background: #fff0ef; color: #a4231e; border: 1px solid #f0c2bf; }
-.result { background: #f0f5ff; border: 1px solid #ccdcff; }
-h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
-.result a { color: #123dba; display: block; overflow-wrap: anywhere; }
-.saving { color: #167445; margin-bottom: 0; }
-.warning { color: #8a5a03; margin-bottom: 0; }
-.qr { margin-top: 1.5rem; text-align: center; }
-.qr img { display: block; max-width: 100%; height: auto; margin: .75rem auto; background: #fff; }
-footer { color: #657089; font-size: .85rem; margin-top: 2rem; text-align: center; }
+
+#output-link {
+  color: rgb(50, 100, 255);
+  word-break: break-all;
+}
+
+#output-ratio {
+  transition: color 0.5s;
+  color: gray;
+  user-select: none;
+}
+
+#qrcode {
+  display: none;
+}
+
+#qr-correct-level-container {
+  display: none;
+}
+
+#query-warning {
+  display: none;
+  font-size: 1rem;
+  text-align: justify;
+  text-align-last: center;
+  max-width: 80vmin;
+  background-color: gold;
+  padding: 5px 10px;
+  border-radius: 10px;
+  margin: 5px 0 15px 0;
+}
+
+#query-warning summary {
+  cursor: pointer;
+}
