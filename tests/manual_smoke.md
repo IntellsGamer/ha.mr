@@ -1,0 +1,4 @@
+# Manual Flask smoke test
+
+The local Flask service loaded successfully at `http://127.0.0.1:5000/`. The rendered page presented the destination URL input, emoji option, QR-output option, error-correction selector, and submit control. The compatibility reference URL `https://example.com/docs/guide?ref=ha#intro` was entered and QR output was enabled; the following browser step submits this form to verify rendered text output, QR image generation, and the QR redirect link.
+The submitted form produced the expected browser-compatible ASCII fragment payload `O,QnpHuemsiV2e_BfyZNRqhI!`, matching the reference payload from the original deployment. It also rendered a QR PNG and emitted a QR-alphanumeric path payload. This verifies the server-rendered form, pure-Python compression path, QR image renderer, and generated transport links end to end.
