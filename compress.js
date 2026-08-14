@@ -264,7 +264,20 @@ export function compress (input, alphabet) {
         huffmanNumber = huffmanEncode(huffmanNumber, pathEncode["%"]);
         i -= 2;
       } else {
-        huffmanNumber = huffmanEncode(huffmanNumber, pathEncode[segment.value[i]]);
+        if (segment.value[i] === "~") {
+          /**
+           * HACK HACK HACK!!!
+           * Our Huffman tree is missing the tilde character (whoops!)
+           * It's too late to change it now without bumping the version
+           * number, and that currently costs 1 bit. Tildes are so rare
+           * that it makes more sense to %-encode them instead.
+           */
+          huffmanNumber *= 256n;
+          huffmanNumber += BigInt(126);
+          huffmanNumber = huffmanEncode(huffmanNumber, pathEncode["%"]);
+        } else {
+          huffmanNumber = huffmanEncode(huffmanNumber, pathEncode[segment.value[i]]);
+        }
       }
     }
     // Encode segment variant as 0
