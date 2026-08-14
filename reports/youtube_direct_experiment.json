@@ -1,0 +1,22 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "split": "held-out even IDs where id % 101 = 0"
+  },
+  "frame": {
+    "prefix": "https://www.youtube.com/watch?v=",
+    "identifier": "11 Base64URL characters packed as 66 bits",
+    "version": 5
+  },
+  "totals": {
+    "urls": 4780,
+    "existing_symbols": 150886,
+    "best_symbols": 149501,
+    "youtube_exact_watch_urls": 178,
+    "youtube_existing_symbols": 3699,
+    "youtube_direct_symbols": 2314,
+    "direct_wins": 178,
+    "saved_symbols": 1385,
+    "youtube_noncanonical": 24
+  }
+}

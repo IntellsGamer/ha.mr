@@ -1,0 +1,23 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "split": "held-out even IDs where id % 101 = 0"
+  },
+  "categories": [
+    "Base64URL",
+    "decimal",
+    "lower hex",
+    "upper hex",
+    "punctuation",
+    "ASCII",
+    "raw bytes"
+  ],
+  "totals": {
+    "urls": 4780,
+    "existing_symbols": 149501,
+    "typed_symbols": 346290,
+    "best_symbols": 149499,
+    "typed_wins": 1,
+    "saved_symbols": 2
+  }
+}

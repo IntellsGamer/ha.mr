@@ -5,6 +5,10 @@ import unittest
 from fastapi.testclient import TestClient
 
 from app import app
+from ha_mr.diverse_phrases import inverse as diverse_phrase_inverse
+from ha_mr.diverse_phrases import transform as diverse_phrase_transform
+from ha_mr.general_phrases import inverse as general_phrase_inverse
+from ha_mr.general_phrases import transform as general_phrase_transform
 from ha_mr.host_transform import inverse as host_inverse
 from ha_mr.host_transform import transform as host_transform
 from ha_mr.semantic import inverse as semantic_inverse
@@ -15,6 +19,7 @@ from ha_mr.codec import (
     CJK_ALPHABET,
     EMOJI_ALPHABET,
     adaptive_payload_version,
+    compress,
     compress_adaptive,
     decompress_adaptive,
     infer_alphabet,
@@ -56,6 +61,26 @@ class AdaptiveCodecTests(unittest.TestCase):
         transformed = host_transform(url.encode("utf-8"))
         self.assertLess(len(transformed), len(url.encode("utf-8")))
         self.assertEqual(host_inverse(transformed).decode("utf-8"), url)
+
+    def test_v5_direct_frame_shrinks_and_round_trips_youtube_watch_url(self) -> None:
+        url = "https://www.youtube.com/watch?v=Xic_cDYrtnM"
+        legacy = compress(url, ASCII_ALPHABET)
+        payload = compress_adaptive(url, ASCII_ALPHABET)
+        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 5)
+        self.assertEqual(payload_symbol_count(payload, ASCII_ALPHABET), 13)
+        self.assertLess(payload_symbol_count(payload, ASCII_ALPHABET), payload_symbol_count(legacy, ASCII_ALPHABET))
+        self.assertEqual(decompress_adaptive(payload, ASCII_ALPHABET), url)
+
+    def test_frozen_general_phrase_transforms_round_trip(self) -> None:
+        url = (
+            "https://example.invalid/TranscribersOfReddit/wiki/format/images/guide?"
+            "utm_source=mtgcardfetcher&search?q=general+phrase"
+        ).encode("utf-8")
+        general = general_phrase_transform(url)
+        diverse = diverse_phrase_transform(url)
+        self.assertEqual(general_phrase_inverse(general), url)
+        self.assertEqual(diverse_phrase_inverse(diverse), url)
+        self.assertTrue(general != url or diverse != url)
 
     def test_v2_semantic_frame_beats_v1_for_opaque_shared_link_shape(self) -> None:
         url = (

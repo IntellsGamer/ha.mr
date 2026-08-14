@@ -17,6 +17,14 @@ from .semantic import inverse as semantic_inverse
 from .semantic import transform as semantic_transform
 from .host_transform import inverse as host_inverse
 from .host_transform import transform as host_transform
+from .service_grammar import candidates as service_candidates
+from .service_grammar import inverse as service_inverse
+from .youtube_direct import pack_url as pack_youtube_url
+from .youtube_direct import unpack_url as unpack_youtube_url
+from .general_phrases import inverse as general_phrase_inverse
+from .general_phrases import transform as general_phrase_transform
+from .diverse_phrases import inverse as diverse_phrase_inverse
+from .diverse_phrases import transform as diverse_phrase_transform
 from .codec_data import (
     DOMAIN_ENCODE,
     OUTPUT_ALPHABET_ASCII,
@@ -456,6 +464,10 @@ def infer_alphabet(payload: str, *, qr: bool = False) -> Sequence[str]:
 _V1_VERSION = 1
 _V2_VERSION = 2
 _V3_VERSION = 3
+_V4_VERSION = 4
+_V5_VERSION = 5
+_V7_VERSION = 7
+_V8_VERSION = 8
 _V1_METHOD_RAW = 0
 _V1_METHOD_STATIC = 1
 _MAX_V1_URL_BYTES = 65_536
@@ -528,6 +540,14 @@ def _pack_adaptive_frame(version: int, stream: bytes, method: int, alphabet: Seq
     return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
 
 
+def _pack_direct_frame(version: int, value: bytes, alphabet: Sequence[str]) -> str:
+    """Pack a fixed-layout adaptive frame that does not need a method byte."""
+    packed = int.from_bytes(b"\x01" + bytes((version,)) + value, "big")
+    transport = EMOJI_V1_ALPHABET if _uses_legacy_emoji_alphabet(alphabet) else alphabet
+    payload = _number_to_string((packed << 1) | 1, transport)
+    return EMOJI_V1_MARKER + payload if transport is EMOJI_V1_ALPHABET else payload
+
+
 def _adaptive_unpack(payload: str, alphabet: Sequence[str]) -> str:
     body, transport = _v1_transport(payload, alphabet)
     number = _string_to_number(body, transport)
@@ -535,15 +555,29 @@ def _adaptive_unpack(payload: str, alphabet: Sequence[str]) -> str:
         raise CodecError("Payload is not an adaptive frame.")
     value = number >> 1
     raw = value.to_bytes((value.bit_length() + 7) // 8, "big")
-    if len(raw) < 4 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION}:
+    if len(raw) < 3 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION, _V4_VERSION, _V5_VERSION, _V7_VERSION, _V8_VERSION}:
         raise CodecError("Invalid adaptive frame header.")
-    version, method = raw[1], raw[2]
+    version = raw[1]
     try:
-        output = _inflate(raw[3:], method)
-        if version == _V2_VERSION:
-            output = semantic_inverse(output)
-        elif version == _V3_VERSION:
-            output = host_inverse(output)
+        if version == _V5_VERSION:
+            return unpack_youtube_url(raw[2:])
+        method = raw[2]
+        stream = raw[3:]
+        if version == _V4_VERSION:
+            if not stream:
+                raise ValueError("truncated service-prefix frame")
+            prefix_index, stream = stream[0], stream[1:]
+            output = service_inverse(prefix_index, _inflate(stream, method))
+        else:
+            output = _inflate(stream, method)
+            if version == _V2_VERSION:
+                output = semantic_inverse(output)
+            elif version == _V3_VERSION:
+                output = host_inverse(output)
+            elif version == _V7_VERSION:
+                output = general_phrase_inverse(semantic_inverse(output))
+            elif version == _V8_VERSION:
+                output = diverse_phrase_inverse(semantic_inverse(output))
         return output.decode("utf-8")
     except (UnicodeDecodeError, ValueError) as exc:
         raise CodecError("Adaptive payload does not contain a valid UTF-8 URL.") from exc
@@ -562,7 +596,7 @@ def adaptive_payload_version(payload: str, alphabet: Sequence[str]) -> int:
     if not number & 1:
         return 0
     raw = (number >> 1).to_bytes(((number >> 1).bit_length() + 7) // 8, "big")
-    if len(raw) < 3 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION}:
+    if len(raw) < 3 or raw[0] != 1 or raw[1] not in {_V1_VERSION, _V2_VERSION, _V3_VERSION, _V4_VERSION, _V5_VERSION, _V7_VERSION, _V8_VERSION}:
         raise CodecError("Invalid adaptive frame header.")
     return raw[1]
 
@@ -633,11 +667,46 @@ def compress_adaptive(input_url: str, alphabet: Sequence[str] = ASCII_ALPHABET) 
         for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
             payload = _pack_adaptive_frame(_V3_VERSION, _deflate(host_semantic, method), method, alphabet)
             candidates.append((payload, payload_symbol_count(payload, alphabet)))
+
+    # V4 stores one frozen service-grammar prefix index, then DEFLATE-compresses
+    # only the semantic suffix. Every matching prefix is evaluated because the
+    # shortest prefix is not always the shortest final frame.
+    for prefix_index, suffix in service_candidates(encoded):
+        for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
+            stream = bytes((prefix_index,)) + _deflate(suffix, method)
+            payload = _pack_adaptive_frame(_V4_VERSION, stream, method, alphabet)
+            candidates.append((payload, payload_symbol_count(payload, alphabet)))
+
+    # V5 avoids generic compression entirely for the exact canonical YouTube
+    # watch grammar: the eleven Base64URL identifier is a fixed 66-bit value.
+    youtube_id = pack_youtube_url(normalised)
+    if youtube_id is not None:
+        payload = _pack_direct_frame(_V5_VERSION, youtube_id, alphabet)
+        candidates.append((payload, payload_symbol_count(payload, alphabet)))
+
+    # V7 is deliberately general: phrases are delimiter-bounded structures
+    # selected anywhere in the URL, then protected by semantic packing before
+    # DEFLATE. It is not limited to a host or service-specific grammar.
+    phrase_stream = general_phrase_transform(encoded)
+    phrase_semantic = semantic_transform(phrase_stream, opaque_tokens=True)
+    if phrase_semantic != encoded:
+        for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
+            payload = _pack_adaptive_frame(_V7_VERSION, _deflate(phrase_semantic, method), method, alphabet)
+            candidates.append((payload, payload_symbol_count(payload, alphabet)))
+
+    # V8 uses a second, diversity-pruned general table. Its contents favour
+    # reusable path/query structures over overlapping scheme and host strings.
+    diverse_stream = diverse_phrase_transform(encoded)
+    diverse_semantic = semantic_transform(diverse_stream, opaque_tokens=True)
+    if diverse_semantic != encoded:
+        for method in (_V1_METHOD_RAW, _V1_METHOD_STATIC):
+            payload = _pack_adaptive_frame(_V8_VERSION, _deflate(diverse_semantic, method), method, alphabet)
+            candidates.append((payload, payload_symbol_count(payload, alphabet)))
     return min(candidates, key=lambda item: item[1])[0]
 
 
 def decompress_adaptive(payload: str, alphabet: Sequence[str] = ASCII_ALPHABET) -> str:
-    """Decode legacy V0 or an adaptive V1/V2 frame."""
+    """Decode legacy V0 or an adaptive V1–V5/V7/V8 frame."""
     return _adaptive_unpack(payload, alphabet) if is_v1_payload(payload, alphabet) else decompress(payload, alphabet)
 
 

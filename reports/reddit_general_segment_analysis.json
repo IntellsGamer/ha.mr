@@ -1,0 +1,1330 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "split": "held-out even IDs where id % 101 = 0"
+  },
+  "totals": {
+    "urls": 4780
+  },
+  "segment_kinds": {
+    "base64url": 33929,
+    "decimal": 1301,
+    "hex-lower": 248,
+    "hex-upper": 193
+  },
+  "segment_lengths": {
+    "base64url": [
+      [
+        3,
+        8528
+      ],
+      [
+        5,
+        4999
+      ],
+      [
+        4,
+        4116
+      ],
+      [
+        6,
+        3286
+      ],
+      [
+        7,
+        2336
+      ],
+      [
+        1,
+        2095
+      ],
+      [
+        2,
+        1328
+      ],
+      [
+        8,
+        1325
+      ],
+      [
+        9,
+        902
+      ],
+      [
+        11,
+        869
+      ],
+      [
+        10,
+        569
+      ],
+      [
+        12,
+        442
+      ],
+      [
+        13,
+        370
+      ],
+      [
+        14,
+        314
+      ],
+      [
+        15,
+        293
+      ],
+      [
+        20,
+        213
+      ],
+      [
+        18,
+        179
+      ],
+      [
+        16,
+        173
+      ],
+      [
+        19,
+        128
+      ],
+      [
+        22,
+        128
+      ],
+      [
+        17,
+        112
+      ],
+      [
+        21,
+        69
+      ],
+      [
+        27,
+        53
+      ],
+      [
+        24,
+        53
+      ],
+      [
+        34,
+        46
+      ],
+      [
+        49,
+        44
+      ],
+      [
+        23,
+        43
+      ],
+      [
+        36,
+        43
+      ],
+      [
+        44,
+        42
+      ],
+      [
+        46,
+        40
+      ],
+      [
+        31,
+        40
+      ],
+      [
+        47,
+        38
+      ],
+      [
+        25,
+        37
+      ],
+      [
+        37,
+        37
+      ],
+      [
+        26,
+        37
+      ],
+      [
+        48,
+        36
+      ],
+      [
+        29,
+        33
+      ],
+      [
+        42,
+        32
+      ],
+      [
+        28,
+        31
+      ],
+      [
+        30,
+        30
+      ]
+    ],
+    "decimal": [
+      [
+        2,
+        395
+      ],
+      [
+        4,
+        245
+      ],
+      [
+        1,
+        155
+      ],
+      [
+        3,
+        95
+      ],
+      [
+        6,
+        69
+      ],
+      [
+        5,
+        62
+      ],
+      [
+        8,
+        50
+      ],
+      [
+        7,
+        45
+      ],
+      [
+        10,
+        43
+      ],
+      [
+        18,
+        34
+      ],
+      [
+        9,
+        32
+      ],
+      [
+        14,
+        19
+      ],
+      [
+        19,
+        17
+      ],
+      [
+        12,
+        13
+      ],
+      [
+        17,
+        10
+      ],
+      [
+        13,
+        7
+      ],
+      [
+        11,
+        4
+      ],
+      [
+        16,
+        3
+      ],
+      [
+        15,
+        2
+      ],
+      [
+        21,
+        1
+      ]
+    ],
+    "hex-lower": [
+      [
+        2,
+        194
+      ],
+      [
+        32,
+        31
+      ],
+      [
+        4,
+        8
+      ],
+      [
+        6,
+        6
+      ],
+      [
+        10,
+        3
+      ],
+      [
+        24,
+        2
+      ],
+      [
+        20,
+        2
+      ],
+      [
+        64,
+        1
+      ],
+      [
+        8,
+        1
+      ]
+    ],
+    "hex-upper": [
+      [
+        2,
+        175
+      ],
+      [
+        4,
+        9
+      ],
+      [
+        14,
+        3
+      ],
+      [
+        8,
+        3
+      ],
+      [
+        40,
+        2
+      ],
+      [
+        16,
+        1
+      ]
+    ]
+  },
+  "top_delimiter_bounded_phrases": [
+    {
+      "phrase": "com/",
+      "count": 3756
+    },
+    {
+      "phrase": "https://",
+      "count": 2745
+    },
+    {
+      "phrase": "https:/",
+      "count": 2745
+    },
+    {
+      "phrase": "https:",
+      "count": 2745
+    },
+    {
+      "phrase": "www.",
+      "count": 2303
+    },
+    {
+      "phrase": "//www.",
+      "count": 2302
+    },
+    {
+      "phrase": "/www.",
+      "count": 2302
+    },
+    {
+      "phrase": "http:/",
+      "count": 2043
+    },
+    {
+      "phrase": "http://",
+      "count": 2043
+    },
+    {
+      "phrase": "http:",
+      "count": 2043
+    },
+    {
+      "phrase": "https://www.",
+      "count": 1423
+    },
+    {
+      "phrase": "reddit.",
+      "count": 1370
+    },
+    {
+      "phrase": "reddit.com/",
+      "count": 1368
+    },
+    {
+      "phrase": "//www.reddit.",
+      "count": 1158
+    },
+    {
+      "phrase": "//www.reddit.com/",
+      "count": 1158
+    },
+    {
+      "phrase": "/www.reddit.com/",
+      "count": 1158
+    },
+    {
+      "phrase": "/www.reddit.",
+      "count": 1158
+    },
+    {
+      "phrase": "www.reddit.",
+      "count": 1158
+    },
+    {
+      "phrase": "www.reddit.com/",
+      "count": 1158
+    },
+    {
+      "phrase": "com/r/",
+      "count": 1015
+    },
+    {
+      "phrase": "reddit.com/r/",
+      "count": 1009
+    },
+    {
+      "phrase": "www.reddit.com/r/",
+      "count": 897
+    },
+    {
+      "phrase": "/www.reddit.com/r/",
+      "count": 897
+    },
+    {
+      "phrase": "http://www.",
+      "count": 877
+    },
+    {
+      "phrase": "https://www.reddit.",
+      "count": 850
+    },
+    {
+      "phrase": "wiki/",
+      "count": 696
+    },
+    {
+      "phrase": "imgur.com/",
+      "count": 467
+    },
+    {
+      "phrase": "imgur.",
+      "count": 467
+    },
+    {
+      "phrase": "comments/",
+      "count": 463
+    },
+    {
+      "phrase": "org/",
+      "count": 366
+    },
+    {
+      "phrase": "youtube.",
+      "count": 314
+    },
+    {
+      "phrase": "youtube.com/",
+      "count": 314
+    },
+    {
+      "phrase": "http://www.reddit.",
+      "count": 307
+    },
+    {
+      "phrase": "www.youtube.com/",
+      "count": 295
+    },
+    {
+      "phrase": "www.youtube.",
+      "count": 295
+    },
+    {
+      "phrase": "/www.youtube.",
+      "count": 295
+    },
+    {
+      "phrase": "//www.youtube.com/",
+      "count": 295
+    },
+    {
+      "phrase": "/www.youtube.com/",
+      "count": 295
+    },
+    {
+      "phrase": "//www.youtube.",
+      "count": 295
+    },
+    {
+      "phrase": "//i.",
+      "count": 292
+    },
+    {
+      "phrase": "watch?",
+      "count": 289
+    },
+    {
+      "phrase": "youtube.com/watch?",
+      "count": 288
+    },
+    {
+      "phrase": "com/watch?",
+      "count": 288
+    },
+    {
+      "phrase": "watch?v=",
+      "count": 287
+    },
+    {
+      "phrase": "youtube.com/watch?v=",
+      "count": 286
+    },
+    {
+      "phrase": "com/watch?v=",
+      "count": 286
+    },
+    {
+      "phrase": "/www.youtube.com/watch?",
+      "count": 275
+    },
+    {
+      "phrase": "www.youtube.com/watch?",
+      "count": 275
+    },
+    {
+      "phrase": "www.youtube.com/watch?v=",
+      "count": 273
+    },
+    {
+      "phrase": "com/message/",
+      "count": 261
+    },
+    {
+      "phrase": "message/",
+      "count": 261
+    },
+    {
+      "phrase": "reddit.com/message/",
+      "count": 261
+    },
+    {
+      "phrase": "i.imgur.com/",
+      "count": 253
+    },
+    {
+      "phrase": "/i.imgur.com/",
+      "count": 253
+    },
+    {
+      "phrase": "/i.imgur.",
+      "count": 253
+    },
+    {
+      "phrase": "//i.imgur.",
+      "count": 253
+    },
+    {
+      "phrase": "i.imgur.",
+      "count": 253
+    },
+    {
+      "phrase": "//i.imgur.com/",
+      "count": 253
+    },
+    {
+      "phrase": "org/wiki/",
+      "count": 223
+    },
+    {
+      "phrase": "https://www.youtube.",
+      "count": 220
+    },
+    {
+      "phrase": "wikipedia.",
+      "count": 218
+    },
+    {
+      "phrase": "//en.",
+      "count": 218
+    },
+    {
+      "phrase": "wikipedia.org/",
+      "count": 218
+    },
+    {
+      "phrase": "/en.",
+      "count": 218
+    },
+    {
+      "phrase": "wikipedia.org/wiki/",
+      "count": 215
+    },
+    {
+      "phrase": "//imgur.com/",
+      "count": 207
+    },
+    {
+      "phrase": "/imgur.com/",
+      "count": 207
+    },
+    {
+      "phrase": "/imgur.",
+      "count": 207
+    },
+    {
+      "phrase": "//imgur.",
+      "count": 207
+    },
+    {
+      "phrase": "//en.wikipedia.",
+      "count": 199
+    },
+    {
+      "phrase": "en.wikipedia.",
+      "count": 199
+    },
+    {
+      "phrase": "//en.wikipedia.org/",
+      "count": 199
+    },
+    {
+      "phrase": "/en.wikipedia.",
+      "count": 199
+    },
+    {
+      "phrase": "en.wikipedia.org/",
+      "count": 199
+    },
+    {
+      "phrase": "/en.wikipedia.org/",
+      "count": 199
+    },
+    {
+      "phrase": "/www.reddit.com/message/",
+      "count": 197
+    },
+    {
+      "phrase": "www.reddit.com/message/",
+      "count": 197
+    },
+    {
+      "phrase": "/en.wikipedia.org/wiki/",
+      "count": 196
+    },
+    {
+      "phrase": "en.wikipedia.org/wiki/",
+      "count": 196
+    },
+    {
+      "phrase": "http://i.",
+      "count": 180
+    },
+    {
+      "phrase": "message/compose?",
+      "count": 175
+    },
+    {
+      "phrase": "compose?",
+      "count": 175
+    },
+    {
+      "phrase": "reddit.com/message/compose?to=",
+      "count": 175
+    },
+    {
+      "phrase": "com/message/compose?to=",
+      "count": 175
+    },
+    {
+      "phrase": "com/message/compose?",
+      "count": 175
+    },
+    {
+      "phrase": "compose?to=",
+      "count": 175
+    },
+    {
+      "phrase": "reddit.com/message/compose?",
+      "count": 175
+    },
+    {
+      "phrase": "message/compose?to=",
+      "count": 175
+    },
+    {
+      "phrase": "http://i.imgur.",
+      "count": 168
+    },
+    {
+      "phrase": "www.reddit.com/message/compose?",
+      "count": 159
+    },
+    {
+      "phrase": "http://imgur.",
+      "count": 155
+    },
+    {
+      "phrase": "http://imgur.com/",
+      "count": 155
+    },
+    {
+      "phrase": "np.reddit.com/",
+      "count": 149
+    },
+    {
+      "phrase": "np.reddit.",
+      "count": 149
+    },
+    {
+      "phrase": "wiki_",
+      "count": 140
+    },
+    {
+      "phrase": "https://en.",
+      "count": 134
+    },
+    {
+      "phrase": "//np.reddit.",
+      "count": 133
+    },
+    {
+      "phrase": "//np.reddit.com/",
+      "count": 133
+    },
+    {
+      "phrase": "/np.",
+      "count": 133
+    },
+    {
+      "phrase": "/np.reddit.",
+      "count": 133
+    },
+    {
+      "phrase": "/np.reddit.com/",
+      "count": 133
+    },
+    {
+      "phrase": "//np.",
+      "count": 133
+    },
+    {
+      "phrase": "html",
+      "count": 130
+    },
+    {
+      "phrase": "github.",
+      "count": 123
+    },
+    {
+      "phrase": "images/",
+      "count": 121
+    },
+    {
+      "phrase": "TranscribersOfReddit/",
+      "count": 120
+    },
+    {
+      "phrase": "com/r/TranscribersOfReddit/",
+      "count": 120
+    },
+    {
+      "phrase": "r/TranscribersOfReddit/wiki/",
+      "count": 120
+    },
+    {
+      "phrase": "www.reddit.com/r/TranscribersOfReddit/",
+      "count": 120
+    },
+    {
+      "phrase": "reddit.com/r/TranscribersOfReddit/",
+      "count": 120
+    },
+    {
+      "phrase": "r/TranscribersOfReddit/",
+      "count": 120
+    },
+    {
+      "phrase": "reddit.com/r/TranscribersOfReddit/wiki/",
+      "count": 120
+    },
+    {
+      "phrase": "com/r/TranscribersOfReddit/wiki/",
+      "count": 120
+    },
+    {
+      "phrase": "TranscribersOfReddit/wiki/",
+      "count": 120
+    },
+    {
+      "phrase": "https://en.wikipedia.",
+      "count": 118
+    },
+    {
+      "phrase": "net/",
+      "count": 117
+    },
+    {
+      "phrase": "github.com/",
+      "count": 114
+    },
+    {
+      "phrase": "https://i.",
+      "count": 112
+    },
+    {
+      "phrase": "/github.",
+      "count": 112
+    },
+    {
+      "phrase": "//github.",
+      "count": 112
+    },
+    {
+      "phrase": "//github.com/",
+      "count": 112
+    },
+    {
+      "phrase": "/github.com/",
+      "count": 112
+    },
+    {
+      "phrase": "https://github.com/",
+      "count": 110
+    },
+    {
+      "phrase": "https://github.",
+      "count": 110
+    },
+    {
+      "phrase": "the_",
+      "count": 103
+    },
+    {
+      "phrase": "/youtu.",
+      "count": 103
+    },
+    {
+      "phrase": "/youtu.be/",
+      "count": 103
+    },
+    {
+      "phrase": "youtu.",
+      "count": 103
+    },
+    {
+      "phrase": "//youtu.be/",
+      "count": 103
+    },
+    {
+      "phrase": "youtu.be/",
+      "count": 103
+    },
+    {
+      "phrase": "//youtu.",
+      "count": 103
+    },
+    {
+      "phrase": "https://np.reddit.",
+      "count": 96
+    },
+    {
+      "phrase": "https://np.",
+      "count": 96
+    },
+    {
+      "phrase": "pcpartpicker.",
+      "count": 90
+    },
+    {
+      "phrase": "com/a/",
+      "count": 88
+    },
+    {
+      "phrase": "imgur.com/a/",
+      "count": 87
+    },
+    {
+      "phrase": "pcpartpicker.com/",
+      "count": 87
+    },
+    {
+      "phrase": "/imgur.com/a/",
+      "count": 86
+    },
+    {
+      "phrase": "//imgur.com/a/",
+      "count": 86
+    },
+    {
+      "phrase": "?to=",
+      "count": 86
+    },
+    {
+      "phrase": "com/message/compose/",
+      "count": 86
+    },
+    {
+      "phrase": "message/compose/",
+      "count": 86
+    },
+    {
+      "phrase": "reddit.com/message/compose/",
+      "count": 86
+    },
+    {
+      "phrase": "com/message/compose/?to=",
+      "count": 86
+    },
+    {
+      "phrase": "reddit.com/message/compose/?",
+      "count": 86
+    },
+    {
+      "phrase": "compose/?to=",
+      "count": 86
+    },
+    {
+      "phrase": "compose/?",
+      "count": 86
+    },
+    {
+      "phrase": "compose/",
+      "count": 86
+    },
+    {
+      "phrase": "com/message/compose/?",
+      "count": 86
+    },
+    {
+      "phrase": "message/compose/?to=",
+      "count": 86
+    },
+    {
+      "phrase": "message/compose/?",
+      "count": 86
+    },
+    {
+      "phrase": "np.reddit.com/r/",
+      "count": 86
+    },
+    {
+      "phrase": "https://i.imgur.",
+      "count": 85
+    },
+    {
+      "phrase": "http://en.",
+      "count": 84
+    },
+    {
+      "phrase": "http://en.wikipedia.",
+      "count": 81
+    },
+    {
+      "phrase": "https://youtu.",
+      "count": 78
+    },
+    {
+      "phrase": "https://youtu.be/",
+      "count": 78
+    },
+    {
+      "phrase": "r/TranscribersOfReddit/wiki/format/",
+      "count": 78
+    },
+    {
+      "phrase": "wiki/format/",
+      "count": 78
+    },
+    {
+      "phrase": "com/r/TranscribersOfReddit/wiki/format/",
+      "count": 78
+    },
+    {
+      "phrase": "r/TranscribersOfReddit/wiki/format/images/",
+      "count": 78
+    },
+    {
+      "phrase": "format/images/",
+      "count": 78
+    },
+    {
+      "phrase": "TranscribersOfReddit/wiki/format/images/",
+      "count": 78
+    },
+    {
+      "phrase": "wiki/format/images/",
+      "count": 78
+    },
+    {
+      "phrase": "TranscribersOfReddit/wiki/format/",
+      "count": 78
+    },
+    {
+      "phrase": "format/",
+      "count": 78
+    },
+    {
+      "phrase": "/pcpartpicker.",
+      "count": 77
+    },
+    {
+      "phrase": "//pcpartpicker.",
+      "count": 77
+    },
+    {
+      "phrase": "/np.reddit.com/r/",
+      "count": 77
+    },
+    {
+      "phrase": "http://www.youtube.",
+      "count": 75
+    },
+    {
+      "phrase": "/pcpartpicker.com/",
+      "count": 74
+    },
+    {
+      "phrase": "//pcpartpicker.com/",
+      "count": 74
+    },
+    {
+      "phrase": "the-",
+      "count": 70
+    },
+    {
+      "phrase": "index",
+      "count": 66
+    },
+    {
+      "phrase": "wiki/index",
+      "count": 66
+    },
+    {
+      "phrase": "twitter.com/",
+      "count": 64
+    },
+    {
+      "phrase": "twitter.",
+      "count": 64
+    },
+    {
+      "phrase": "google.",
+      "count": 63
+    },
+    {
+      "phrase": "/twitter.com/",
+      "count": 62
+    },
+    {
+      "phrase": "//twitter.com/",
+      "count": 62
+    },
+    {
+      "phrase": "/twitter.",
+      "count": 62
+    },
+    {
+      "phrase": "//twitter.",
+      "count": 62
+    },
+    {
+      "phrase": "https://twitter.com/",
+      "count": 60
+    },
+    {
+      "phrase": "https://twitter.",
+      "count": 60
+    },
+    {
+      "phrase": "r/imagesofnetwork/wiki/faqandinstructions#wiki_",
+      "count": 60
+    },
+    {
+      "phrase": "reddit.com/r/imagesofnetwork/",
+      "count": 60
+    },
+    {
+      "phrase": "faqandinstructions#",
+      "count": 60
+    },
+    {
+      "phrase": "r/imagesofnetwork/wiki/",
+      "count": 60
+    },
+    {
+      "phrase": "r/imagesofnetwork/",
+      "count": 60
+    },
+    {
+      "phrase": "wiki/faqandinstructions#wiki_",
+      "count": 60
+    },
+    {
+      "phrase": "imagesofnetwork/",
+      "count": 60
+    },
+    {
+      "phrase": "imagesofnetwork/wiki/faqandinstructions#",
+      "count": 60
+    },
+    {
+      "phrase": "faqandinstructions#wiki_",
+      "count": 60
+    },
+    {
+      "phrase": "wiki/faqandinstructions#",
+      "count": 60
+    },
+    {
+      "phrase": "com/r/imagesofnetwork/wiki/faqandinstructions#",
+      "count": 60
+    },
+    {
+      "phrase": "www.reddit.com/r/imagesofnetwork/",
+      "count": 60
+    },
+    {
+      "phrase": "com/r/imagesofnetwork/",
+      "count": 60
+    },
+    {
+      "phrase": "r/imagesofnetwork/wiki/faqandinstructions#",
+      "count": 60
+    },
+    {
+      "phrase": "reddit.com/r/imagesofnetwork/wiki/",
+      "count": 60
+    },
+    {
+      "phrase": "com/r/imagesofnetwork/wiki/",
+      "count": 60
+    },
+    {
+      "phrase": "imagesofnetwork/wiki/",
+      "count": 60
+    },
+    {
+      "phrase": "imagesofnetwork/wiki/faqandinstructions#wiki_",
+      "count": 60
+    },
+    {
+      "phrase": "source=",
+      "count": 57
+    },
+    {
+      "phrase": "//gatherer.wizards.",
+      "count": 56
+    },
+    {
+      "phrase": "http://gatherer.wizards.",
+      "count": 56
+    },
+    {
+      "phrase": "/gatherer.wizards.",
+      "count": 56
+    },
+    {
+      "phrase": "gatherer.",
+      "count": 56
+    },
+    {
+      "phrase": "gatherer.wizards.com/",
+      "count": 56
+    },
+    {
+      "phrase": "/gatherer.wizards.com/",
+      "count": 56
+    },
+    {
+      "phrase": "wizards.com/",
+      "count": 56
+    },
+    {
+      "phrase": "name=",
+      "count": 56
+    },
+    {
+      "phrase": "http://gatherer.",
+      "count": 56
+    },
+    {
+      "phrase": "gatherer.wizards.",
+      "count": 56
+    },
+    {
+      "phrase": "//gatherer.wizards.com/",
+      "count": 56
+    },
+    {
+      "phrase": "/gatherer.",
+      "count": 56
+    },
+    {
+      "phrase": "//gatherer.",
+      "count": 56
+    },
+    {
+      "phrase": "wizards.",
+      "count": 56
+    },
+    {
+      "phrase": "php?",
+      "count": 55
+    },
+    {
+      "phrase": "google.com/",
+      "count": 55
+    },
+    {
+      "phrase": "np.reddit.com/message/",
+      "count": 54
+    },
+    {
+      "phrase": "rules",
+      "count": 53
+    },
+    {
+      "phrase": "https://imgur.com/",
+      "count": 52
+    },
+    {
+      "phrase": "https://imgur.",
+      "count": 52
+    },
+    {
+      "phrase": "product/",
+      "count": 51
+    },
+    {
+      "phrase": "news/",
+      "count": 49
+    },
+    {
+      "phrase": "and_",
+      "count": 48
+    },
+    {
+      "phrase": "/reddit.",
+      "count": 48
+    },
+    {
+      "phrase": "//reddit.",
+      "count": 48
+    },
+    {
+      "phrase": "redd.",
+      "count": 48
+    },
+    {
+      "phrase": "redd.it/",
+      "count": 48
+    },
+    {
+      "phrase": "search?",
+      "count": 47
+    },
+    {
+      "phrase": "/np.reddit.com/message/",
+      "count": 47
+    },
+    {
+      "phrase": "/reddit.com/",
+      "count": 46
+    },
+    {
+      "phrase": "//reddit.com/",
+      "count": 46
+    },
+    {
+      "phrase": "what_",
+      "count": 45
+    },
+    {
+      "phrase": "http://pcpartpicker.",
+      "count": 44
+    },
+    {
+      "phrase": "status/",
+      "count": 44
+    },
+    {
+      "phrase": "com/product/",
+      "count": 43
+    },
+    {
+      "phrase": "np.reddit.com/message/compose/",
+      "count": 43
+    },
+    {
+      "phrase": "http://pcpartpicker.com/",
+      "count": 42
+    },
+    {
+      "phrase": "utm_",
+      "count": 42
+    },
+    {
+      "phrase": "wiki/rules",
+      "count": 42
+    },
+    {
+      "phrase": "search?q=",
+      "count": 40
+    },
+    {
+      "phrase": "scryfall.com/",
+      "count": 40
+    },
+    {
+      "phrase": "scryfall.",
+      "count": 40
+    },
+    {
+      "phrase": "content/",
+      "count": 39
+    },
+    {
+      "phrase": "to=/",
+      "count": 39
+    },
+    {
+      "phrase": "utm_source=",
+      "count": 39
+    },
+    {
+      "phrase": "www.reddit.com/message/compose/",
+      "count": 38
+    },
+    {
+      "phrase": "to=/r/",
+      "count": 38
+    }
+  ],
+  "repetition": {
+    "tokens_repeated": 314
+  }
+}
