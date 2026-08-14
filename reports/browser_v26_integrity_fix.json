@@ -1,0 +1,9 @@
+{
+  "issue": "Transfer-size equality rejected a production asset response before the browser V26 runtime could initialize.",
+  "fix": "The loader now SHA-256 validates decoded response bytes against the immutable manifest and permits retry after a failed initialization.",
+  "clean_cache_validation": {
+    "codec_cache_cleared": true,
+    "service_worker_unregistered": true,
+    "result": "A clean reload completed V26 asset initialization and reached the client-side ready state."
+  }
+}
