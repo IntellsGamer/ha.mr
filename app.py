@@ -50,8 +50,6 @@ _CRAWLER_USER_AGENT_MARKERS = (
     "linkedinbot",
     "telegrambot",
     "whatsapp",
-    "googlebot",
-    "bingbot",
     "yandexbot",
     "duckduckbot",
     "applebot",

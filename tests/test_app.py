@@ -75,6 +75,13 @@ class ASGIApplicationTests(unittest.TestCase):
         self.assertIn('property="og:title"', crawler.text)
         self.assertIn("ha.mr — self-contained URL compressor", crawler.text)
 
+        for search_bot in ("Googlebot/2.1", "bingbot/2.0"):
+            with self.subTest(user_agent=search_bot):
+                normal_page = self.client.get("/", headers={"user-agent": search_bot, "accept": "text/html"})
+                self.assertEqual(normal_page.status_code, 200)
+                self.assertIn('id="input-link"', normal_page.text)
+                self.assertNotIn('property="og:title"', normal_page.text)
+
     def test_qr_short_link_negotiates_terminal_json_and_crawler_responses(self) -> None:
         destination = "https://example.com/docs/guide?ref=ha#intro"
         payload = compress(destination, QR_ALPHABET)
