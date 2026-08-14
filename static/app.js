@@ -53,6 +53,12 @@
   }
 
   function setCodecStatus(status) {
+    // Worker precache progress can arrive after the codec has verified itself.
+    // Ignore that late event rather than replacing the ready state in the UI.
+    if (status.stage === "download" && window.HaMrBrowserCodec?.ready) {
+      hideBootstrap();
+      return;
+    }
     const suffix = Number.isInteger(status.progress) ? ` ${status.progress}%` : "";
     codecStatusElement.textContent = `${status.message}${suffix}`;
     codecStatusElement.dataset.state = status.stage || "idle";
@@ -162,23 +168,45 @@
     }
   }
 
+  const QR_ERROR_LEVELS = ["L", "M", "Q", "H"];
+
+  function showQr(image, link) {
+    qrCodeImage.style.display = "inline";
+    qrCodeCorrectionLevelContainer.style.display = "inline";
+    qrCodeImage.src = image;
+    qrCodeImage.title = link;
+  }
+
   async function updateQr(input, version) {
     if (!qrSetting.checked) {
       qrCodeImage.style.display = "none";
       qrCodeCorrectionLevelContainer.style.display = "none";
       return;
     }
-    // QR rendering remains a server-rendered image, but the server invokes the
-    // same V26 codec and therefore produces the same encoded destination.
-    const qrOutput = await api("/api/qr", {
-      url: input,
-      correction_level: Number(qrCodeCorrectionLevelElement.value),
-    });
+
+    const correctionLevel = Number(qrCodeCorrectionLevelElement.value);
+    if (usingClient()) {
+      if (!window.QRCode) throw new Error("Client QR encoder is unavailable.");
+      if (!window.HaMrBrowserCodec.ready) throw new Error("Client-side V26 codec is still preparing.");
+      // QR mode uses the exact browser V26 codec too, but its alphanumeric
+      // transport produces a denser, more scanner-friendly path URL.
+      const payload = window.HaMrBrowserCodec.compress(input, "qr");
+      const qrBaseLink = currentBaseLink().replace(/\/$/, "").toUpperCase();
+      const link = `${qrBaseLink}/${payload}`;
+      const image = await window.QRCode.toDataURL(link, {
+        errorCorrectionLevel: QR_ERROR_LEVELS[correctionLevel] || "M",
+        width: 256,
+        margin: 4,
+      });
+      if (version !== updateVersion) return;
+      showQr(image, link);
+      return;
+    }
+
+    // Server rendering is retained only for an explicitly selected server codec.
+    const qrOutput = await api("/api/qr", { url: input, correction_level: correctionLevel });
     if (version !== updateVersion) return;
-    qrCodeImage.style.display = "inline";
-    qrCodeCorrectionLevelContainer.style.display = "inline";
-    qrCodeImage.src = qrOutput.image;
-    qrCodeImage.title = qrOutput.link;
+    showQr(qrOutput.image, qrOutput.link);
   }
 
   async function outputPayload(input, mode) {

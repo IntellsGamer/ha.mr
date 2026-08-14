@@ -6,15 +6,15 @@
   "codec": {
     "archive": {
       "url": "/static/codec/v26/ha_mr_v26.zip",
-      "bytes": 142572,
-      "sha256": "e9a81e6aaa65fb7ad6eac9ab84ba553ce9a9ae88a47d312706cf9d187200980d"
+      "bytes": 142584,
+      "sha256": "986a55456907d7ca970feb861ab3408914ef8fe4f7e684b03f021608e21599a7"
     },
     "conformance": {
       "url": "/static/codec/v26/conformance.json",
-      "bytes": 2660,
-      "sha256": "e4e45c469fb26027c76ca1f9dc7c67b0d85c424f0906837c43a49efea781ac0c"
+      "bytes": 3074,
+      "sha256": "3a3d92c9edb543481dd5d15bf0fbcb8a47cacd4d8955e6750c6b0cc884647641"
     },
-    "revision": "e9a81e6aaa65fb7ad6ea"
+    "revision": "986a55456907d7ca970f"
   },
   "runtime_assets": [
     {
@@ -43,5 +43,5 @@
       "sha256": "6ce978607f5b03baebfaf60667da660153a4459282b1234c27daa8ba77358185"
     }
   ],
-  "cache_name": "ha-mr-v26-e9a81e6aaa65fb7ad6ea"
+  "cache_name": "ha-mr-v26-986a55456907d7ca970f"
 }

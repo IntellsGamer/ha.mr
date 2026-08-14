@@ -1,11 +1,12 @@
 /* Offline-first shell and exact V26 runtime cache. */
-const CACHE_VERSION = "ha-mr-offline-v4";
+const CACHE_VERSION = "ha-mr-offline-v9";
 const APP_SHELL = [
   { url: "/", bytes: 36_000 },
-  { url: "/static/app.css?v=v26-browser-10", bytes: 9_000 },
-  { url: "/static/app.js?v=v26-browser-10", bytes: 13_000 },
-  { url: "/static/browser_codec_runtime.js?v=v26-browser-10", bytes: 8_000 },
-  { url: "/static/codec/v26/manifest.json", bytes: 2_000 },
+  { url: "/static/app.css?v=v26-browser-15", bytes: 9_000 },
+  { url: "/static/qrcode.js?v=local-qr-1", bytes: 23_467 },
+  { url: "/static/app.js?v=v26-browser-15", bytes: 15_000 },
+  { url: "/static/browser_codec_runtime.js?v=v26-browser-15", bytes: 8_000 },
+  { url: "/static/codec/v26/manifest.json?v=v26-browser-15", bytes: 2_000 },
   { url: "/static/codec/v26/conformance.json", bytes: 2_660 },
   { url: "/static/codec/v26/ha_mr_v26.zip", bytes: 142_572 },
   { url: "/static/pyodide/0.26.3/pyodide.js", bytes: 14_767 },

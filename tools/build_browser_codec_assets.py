@@ -17,6 +17,7 @@ from ha_mr.codec import (  # noqa: E402
     ASCII_ALPHABET,
     CJK_V2_ALPHABET,
     EMOJI_ALPHABET,
+    QR_ALPHABET,
     compress_adaptive,
 )
 
@@ -43,6 +44,7 @@ from ha_mr.codec import (
     CJK_ALPHABET,
     CJK_V2_ALPHABET,
     EMOJI_ALPHABET,
+    QR_ALPHABET,
     CodecError,
     compress_adaptive,
     decompress_adaptive,
@@ -53,6 +55,7 @@ _ALPHABETS = {
     "ascii": ASCII_ALPHABET,
     "emoji": EMOJI_ALPHABET,
     "cjk": CJK_V2_ALPHABET,
+    "qr": QR_ALPHABET,
 }
 
 def _alphabet(mode):
@@ -111,6 +114,7 @@ def build_conformance() -> None:
                 "ascii": compress_adaptive(url, ASCII_ALPHABET),
                 "emoji": compress_adaptive(url, EMOJI_ALPHABET),
                 "cjk": compress_adaptive(url, CJK_V2_ALPHABET),
+                "qr": compress_adaptive(url, QR_ALPHABET),
             },
         })
     payload = {

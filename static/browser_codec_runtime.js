@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const MANIFEST_URL = "/static/codec/v26/manifest.json";
+  const MANIFEST_URL = "/static/codec/v26/manifest.json?v=v26-browser-13";
   const PYODIDE_SCRIPT = "/static/pyodide/0.26.3/pyodide.js";
 
   class BrowserCodecError extends Error {}
@@ -58,7 +58,8 @@
           progress: Math.round((completedBytes / totalBytes) * 100),
           cached: false,
         });
-        const response = await fetch(asset.url, { cache: "no-store" });
+        const separator = asset.url.includes("?") ? "&" : "?";
+        const response = await fetch(`${asset.url}${separator}v=${encodeURIComponent(manifest.codec.revision)}`, { cache: "no-store" });
         if (!response.ok || !response.body) throw new BrowserCodecError(`Failed to download ${asset.url}.`);
         const reader = response.body.getReader();
         const chunks = [];
