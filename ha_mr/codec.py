@@ -31,6 +31,8 @@ from .percent_protocol import inverse as percent_protocol_inverse
 from .percent_protocol import transform as percent_protocol_transform
 from .universal_prefix import inverse as universal_prefix_inverse
 from .universal_prefix import transform as universal_prefix_transform
+from .context_arithmetic import decode as context_arithmetic_decode
+from .context_arithmetic import encode as context_arithmetic_encode
 from .codec_data import (
     DOMAIN_ENCODE,
     OUTPUT_ALPHABET_ASCII,
@@ -493,6 +495,8 @@ _COMPACT_PHRASE_VERSION = 20
 _COMPACT_DIVERSE_VERSION = 21
 _COMPACT_UNIVERSAL_VERSION = 22
 _COMPACT_PERCENT_PROTOCOL_VERSION = 23
+_COMPACT_CONTEXT_VERSION = 24
+_COMPACT_FACTORIZED_CONTEXT_VERSION = 26
 _COMPACT_VERSIONS = {
     _COMPACT_BASE_VERSION,
     _COMPACT_FACTORIZED_VERSION,
@@ -502,6 +506,8 @@ _COMPACT_VERSIONS = {
     _COMPACT_DIVERSE_VERSION,
     _COMPACT_UNIVERSAL_VERSION,
     _COMPACT_PERCENT_PROTOCOL_VERSION,
+    _COMPACT_CONTEXT_VERSION,
+    _COMPACT_FACTORIZED_CONTEXT_VERSION,
 }
 _LEGACY_ADAPTIVE_VERSIONS = {_V1_VERSION, _V2_VERSION, _V3_VERSION, _V4_VERSION, _V5_VERSION, _V7_VERSION, _V8_VERSION, _V11_VERSION}
 _V1_METHOD_RAW = 0
@@ -553,6 +559,31 @@ def _inflate(stream: bytes, method: int) -> bytes:
     if not decompressor.eof or len(output) > _MAX_V1_URL_BYTES:
         raise CodecError("Invalid or oversized V1 compressed payload.")
     return output
+
+
+def _encode_length(value: int) -> bytes:
+    """Encode a bounded unsigned URL length as a compact base-128 varint."""
+    if not 0 <= value <= _MAX_V1_URL_BYTES:
+        raise CodecError("URL length exceeds the configured codec limit.")
+    output = bytearray()
+    while True:
+        byte = value & 0x7F
+        value >>= 7
+        output.append(byte | (0x80 if value else 0))
+        if not value:
+            return bytes(output)
+
+
+def _decode_length(stream: bytes) -> tuple[int, bytes]:
+    """Read a canonical bounded base-128 length prefix from an arithmetic frame."""
+    value = 0
+    for index, byte in enumerate(stream[:3]):
+        value |= (byte & 0x7F) << (7 * index)
+        if not byte & 0x80:
+            if value > _MAX_V1_URL_BYTES:
+                raise ValueError("arithmetic output length exceeds codec limit")
+            return value, stream[index + 1:]
+    raise ValueError("truncated or oversized arithmetic length")
 
 
 def _uses_legacy_emoji_alphabet(alphabet: Sequence[str]) -> bool:
@@ -644,7 +675,23 @@ def _adaptive_unpack(payload: str, alphabet: Sequence[str]) -> str:
         method_offset = 2 if historical else 1
         method = raw[method_offset]
         stream = raw[method_offset + 1:]
-        if version in {_V4_VERSION, _COMPACT_SERVICE_VERSION}:
+        if version == _COMPACT_FACTORIZED_CONTEXT_VERSION:
+            if method != 0 or len(stream) < 3:
+                raise ValueError("invalid factorized arithmetic frame")
+            host_index, path_index = stream[0], stream[1]
+            suffix_length, arithmetic_stream = _decode_length(stream[2:])
+            seed = factorized_inverse(host_index, path_index, b"")
+            output = factorized_inverse(
+                host_index,
+                path_index,
+                context_arithmetic_decode(arithmetic_stream, suffix_length, seed),
+            )
+        elif version == _COMPACT_CONTEXT_VERSION:
+            if method != 0:
+                raise ValueError("invalid arithmetic frame method")
+            output_length, arithmetic_stream = _decode_length(stream)
+            output = context_arithmetic_decode(arithmetic_stream, output_length)
+        elif version in {_V4_VERSION, _COMPACT_SERVICE_VERSION}:
             if not stream:
                 raise ValueError("truncated service-prefix frame")
             prefix_index, stream = stream[0], stream[1:]
@@ -760,6 +807,13 @@ def compress_adaptive(input_url: str, alphabet: Sequence[str] = ASCII_ALPHABET) 
             payload = _pack_compact_frame(_COMPACT_BASE_VERSION, _deflate(host_semantic, method), 4 + method, alphabet)
             candidates.append((payload, payload_symbol_count(payload, alphabet)))
 
+    # V24 is a purpose-built static arithmetic model over raw URL bytes. Its
+    # model is frozen in the decoder, so it is fully self-contained and can
+    # improve arbitrary long-tail URLs rather than only known services.
+    arithmetic_stream = _encode_length(len(encoded)) + context_arithmetic_encode(encoded)
+    payload = _pack_compact_frame(_COMPACT_CONTEXT_VERSION, arithmetic_stream, 0, alphabet)
+    candidates.append((payload, payload_symbol_count(payload, alphabet)))
+
     # V18 retains the full general service-prefix grammar while compacting the
     # frame header. Each matching prefix remains a separate exact-size choice.
     for prefix_index, suffix in service_candidates(encoded):
@@ -798,6 +852,16 @@ def compress_adaptive(input_url: str, alphabet: Sequence[str] = ASCII_ALPHABET) 
             stream = bytes((host_index, path_index)) + _deflate(suffix_semantic, method)
             payload = _pack_compact_frame(_COMPACT_FACTORIZED_VERSION, stream, method, alphabet)
             candidates.append((payload, payload_symbol_count(payload, alphabet)))
+
+    # V26 composes the general frozen host/path grammar with the context model.
+    # The decoder seeds its state from the recovered prefix, then arithmetic-
+    # decodes only the literal suffix. This avoids sending the common prefix to
+    # either the entropy coder or the payload.
+    for host_index, path_index, suffix in factorized_candidates(encoded):
+        seed = factorized_inverse(host_index, path_index, b"")
+        stream = bytes((host_index, path_index)) + _encode_length(len(suffix)) + context_arithmetic_encode(suffix, seed)
+        payload = _pack_compact_frame(_COMPACT_FACTORIZED_CONTEXT_VERSION, stream, 0, alphabet)
+        candidates.append((payload, payload_symbol_count(payload, alphabet)))
 
     # Domain-neutral syntax candidates. V22 packs only the universal URL start;
     # V23 packs nested percent-encoded protocol strings commonly used by any

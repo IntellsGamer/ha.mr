@@ -1,0 +1,22 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "training": "odd IDs static grammar-context model",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "model": {
+    "grammar_states": 8,
+    "previous_character_classes": 50,
+    "contexts": 400,
+    "alphabet_bytes": 256,
+    "normalization_total": 16384
+  },
+  "totals": {
+    "urls": 4780,
+    "existing_symbols": 145033,
+    "custom_symbols": 181839,
+    "best_symbols": 141966,
+    "wins": 670,
+    "saved_symbols": 3067
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "training": "odd IDs static grammar-context model",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "frame": "V26 concept: frozen host index + frozen path index + suffix length + seeded static arithmetic stream",
+  "totals": {
+    "urls": 4780,
+    "existing_symbols": 145033,
+    "no_factorized_prefix": 2475,
+    "best_symbols": 139168,
+    "custom_symbols": 63780,
+    "wins": 1005,
+    "saved_symbols": 5865
+  }
+}

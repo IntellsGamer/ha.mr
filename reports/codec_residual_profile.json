@@ -1,0 +1,176 @@
+{
+  "corpus": {
+    "source": "smythp/reddit_links_dataset",
+    "evaluation": "even IDs where id % 101 = 0"
+  },
+  "overall": {
+    "urls": 4780,
+    "input_bytes": 278354,
+    "payload_symbols": 145033,
+    "frame_v0": 3244,
+    "frame_v17": 333,
+    "frame_v18": 931,
+    "frame_v22": 30,
+    "frame_v19": 178,
+    "frame_v21": 43,
+    "frame_v16": 10,
+    "frame_v23": 1,
+    "frame_v20": 10
+  },
+  "frame_distribution": {
+    "v0": 3244,
+    "v17": 333,
+    "v18": 931,
+    "v22": 30,
+    "v19": 178,
+    "v21": 43,
+    "v16": 10,
+    "v23": 1,
+    "v20": 10
+  },
+  "by_primary_shape": {
+    "authority_only": {
+      "urls": 143,
+      "input_bytes": 3780,
+      "payload_symbols": 1304,
+      "frame_v0": 143,
+      "mean_payload_symbols": 9.119,
+      "mean_input_bytes": 26.434
+    },
+    "deep_path": {
+      "urls": 1379,
+      "input_bytes": 111747,
+      "payload_symbols": 61913,
+      "frame_v0": 780,
+      "frame_v17": 174,
+      "frame_v18": 369,
+      "frame_v22": 7,
+      "frame_v16": 5,
+      "frame_v21": 41,
+      "frame_v20": 3,
+      "mean_payload_symbols": 44.897,
+      "mean_input_bytes": 81.035
+    },
+    "fragment_bearing": {
+      "urls": 80,
+      "input_bytes": 5076,
+      "payload_symbols": 3262,
+      "frame_v0": 66,
+      "frame_v18": 4,
+      "frame_v22": 7,
+      "frame_v17": 2,
+      "frame_v20": 1,
+      "mean_payload_symbols": 40.775,
+      "mean_input_bytes": 63.45
+    },
+    "nested_encoded_url": {
+      "urls": 4,
+      "input_bytes": 441,
+      "payload_symbols": 336,
+      "frame_v23": 1,
+      "frame_v22": 3,
+      "mean_payload_symbols": 84.0,
+      "mean_input_bytes": 110.25
+    },
+    "opaque_or_long_query": {
+      "urls": 21,
+      "input_bytes": 3094,
+      "payload_symbols": 2091,
+      "frame_v21": 1,
+      "frame_v17": 8,
+      "frame_v18": 7,
+      "frame_v16": 3,
+      "frame_v0": 2,
+      "mean_payload_symbols": 99.571,
+      "mean_input_bytes": 147.333
+    },
+    "ordinary_structured": {
+      "urls": 2302,
+      "input_bytes": 125072,
+      "payload_symbols": 61833,
+      "frame_v0": 1410,
+      "frame_v17": 149,
+      "frame_v18": 544,
+      "frame_v22": 12,
+      "frame_v19": 178,
+      "frame_v16": 2,
+      "frame_v20": 6,
+      "frame_v21": 1,
+      "mean_payload_symbols": 26.861,
+      "mean_input_bytes": 54.332
+    },
+    "single_path_segment": {
+      "urls": 848,
+      "input_bytes": 28068,
+      "payload_symbols": 13535,
+      "frame_v0": 841,
+      "frame_v18": 7,
+      "mean_payload_symbols": 15.961,
+      "mean_input_bytes": 33.099
+    },
+    "very_long_url": {
+      "urls": 3,
+      "input_bytes": 1076,
+      "payload_symbols": 759,
+      "frame_v0": 2,
+      "frame_v22": 1,
+      "mean_payload_symbols": 253.0,
+      "mean_input_bytes": 358.667
+    }
+  },
+  "by_input_length": {
+    "0_40": {
+      "urls": 1357,
+      "input_bytes": 41041,
+      "payload_symbols": 17789,
+      "frame_v0": 1242,
+      "frame_v18": 74,
+      "frame_v17": 38,
+      "frame_v22": 3,
+      "mean_payload_symbols": 13.109,
+      "mean_input_bytes": 30.244
+    },
+    "161_plus": {
+      "urls": 21,
+      "input_bytes": 4458,
+      "payload_symbols": 3241,
+      "frame_v0": 13,
+      "frame_v22": 5,
+      "frame_v18": 1,
+      "frame_v16": 2,
+      "mean_payload_symbols": 154.333,
+      "mean_input_bytes": 212.286
+    },
+    "41_80": {
+      "urls": 2488,
+      "input_bytes": 140194,
+      "payload_symbols": 64316,
+      "frame_v0": 1296,
+      "frame_v17": 246,
+      "frame_v18": 748,
+      "frame_v22": 9,
+      "frame_v19": 178,
+      "frame_v23": 1,
+      "frame_v16": 2,
+      "frame_v20": 7,
+      "frame_v21": 1,
+      "mean_payload_symbols": 25.85,
+      "mean_input_bytes": 56.348
+    },
+    "81_160": {
+      "urls": 914,
+      "input_bytes": 92661,
+      "payload_symbols": 59687,
+      "frame_v0": 693,
+      "frame_v17": 49,
+      "frame_v18": 108,
+      "frame_v22": 13,
+      "frame_v21": 42,
+      "frame_v16": 6,
+      "frame_v20": 3,
+      "mean_payload_symbols": 65.303,
+      "mean_input_bytes": 101.38
+    }
+  },
+  "privacy": "No individual URLs or hostnames are written to this report."
+}

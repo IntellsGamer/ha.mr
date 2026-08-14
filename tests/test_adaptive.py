@@ -107,6 +107,18 @@ class AdaptiveCodecTests(unittest.TestCase):
         self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 22)
         self.assertEqual(decompress_adaptive(payload, ASCII_ALPHABET), url)
 
+    def test_v24_static_context_arithmetic_frame_round_trips_general_redirect(self) -> None:
+        url = "https://example.com/redirect?next=https%3A%2F%2Fmanus.im%2Fdocs%3Fmode%3Dasgi"
+        payload = compress_adaptive(url, ASCII_ALPHABET)
+        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 24)
+        self.assertEqual(decompress_adaptive(payload, ASCII_ALPHABET), url)
+
+    def test_v26_factorized_context_arithmetic_frame_round_trips_general_deep_path(self) -> None:
+        url = "https://www.reddit.com/r/AskReddit/comments/24mzcw/what_is_the_most_interesting_fact_you_know/"
+        payload = compress_adaptive(url, ASCII_ALPHABET)
+        self.assertEqual(adaptive_payload_version(payload, ASCII_ALPHABET), 26)
+        self.assertEqual(decompress_adaptive(payload, ASCII_ALPHABET), url)
+
     def test_v1_emoji_transport_is_prefix_safe(self) -> None:
         payload = compress_adaptive(LONG_TAIL_URL, EMOJI_ALPHABET)
         self.assertTrue(is_v1_payload(payload, EMOJI_ALPHABET))
