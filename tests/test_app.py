@@ -4,6 +4,8 @@ import json
 import unittest
 from pathlib import Path
 
+from fastapi.testclient import TestClient
+
 from app import app
 from ha_mr.codec import ASCII_ALPHABET, QR_ALPHABET, compress, decompress
 
@@ -39,17 +41,21 @@ class CodecTests(unittest.TestCase):
         return value[:-1] if value.endswith("/") and value.count("/") == 3 else value
 
 
-class FlaskTests(unittest.TestCase):
-    def setUp(self) -> None:
-        app.config.update(TESTING=True)
-        self.client = app.test_client()
+class ASGIApplicationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.client = TestClient(app)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.client.close()
 
     def test_home_page_uses_original_interface_and_client_bridge(self) -> None:
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"(read: \"hammer\")", response.data)
-        self.assertIn(b'id="input-link"', response.data)
-        self.assertIn(b"static/app.js", response.data)
+        self.assertIn("(read: \"hammer\")", response.text)
+        self.assertIn('id="input-link"', response.text)
+        self.assertIn("static/app.js", response.text)
 
     def test_fragment_decoder_api_resolves_reference_payload(self) -> None:
         response = self.client.post(
@@ -57,7 +63,7 @@ class FlaskTests(unittest.TestCase):
             json={"payload": "O,QnpHuemsiV2e_BfyZNRqhI!", "mode": "auto"},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json["url"], "https://example.com/docs/guide?ref=ha#intro")
+        self.assertEqual(response.json()["url"], "https://example.com/docs/guide?ref=ha#intro")
 
     def test_fragment_resolver_redirects_reference_payload(self) -> None:
         response = self.client.get(
@@ -65,22 +71,26 @@ class FlaskTests(unittest.TestCase):
             follow_redirects=False,
         )
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["Location"], "https://example.com/docs/guide?ref=ha#intro")
+        self.assertEqual(response.headers["location"], "https://example.com/docs/guide?ref=ha#intro")
 
     def test_qr_api_and_qr_redirect(self) -> None:
         url = "https://example.com/docs/guide?ref=ha#intro"
         response = self.client.post("/api/qr", json={"url": url, "correction_level": 1})
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.json["image"].startswith("data:image/png;base64,"))
-        payload = response.json["payload"]
+        self.assertTrue(response.json()["image"].startswith("data:image/png;base64,"))
+        payload = response.json()["payload"]
         redirect_response = self.client.get(f"/{payload}", follow_redirects=False)
         self.assertEqual(redirect_response.status_code, 302)
-        self.assertEqual(redirect_response.headers["Location"], url)
+        self.assertEqual(redirect_response.headers["location"], url)
 
-    def test_healthcheck(self) -> None:
+    def test_healthcheck_reports_asgi_runtime(self) -> None:
         response = self.client.get("/healthz")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json, {"status": "ok", "codec": "python"})
+        health = response.json()
+        self.assertEqual(health["status"], "ok")
+        self.assertEqual(health["codec"], "python")
+        self.assertEqual(health["runtime"], "asgi")
+        self.assertGreaterEqual(health["cpu_workers"], 1)
 
 
 if __name__ == "__main__":

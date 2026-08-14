@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 
+from fastapi.testclient import TestClient
+
 from app import app
 from ha_mr.codec import (
     ASCII_ALPHABET,
@@ -48,19 +50,23 @@ class AdaptiveCodecTests(unittest.TestCase):
         self.assertEqual(decompress_adaptive(payload, CJK_ALPHABET), LONG_TAIL_URL)
 
 
-class AdaptiveFlaskTests(unittest.TestCase):
-    def setUp(self) -> None:
-        app.config.update(TESTING=True)
-        self.client = app.test_client()
+class AdaptiveASGITests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.client = TestClient(app)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.client.close()
 
     def test_cjk_api_output_round_trips_through_auto_decoder(self) -> None:
         compressed = self.client.post("/api/compress", json={"url": LONG_TAIL_URL, "mode": "cjk"})
         self.assertEqual(compressed.status_code, 200)
-        payload = compressed.json["payload"]
+        payload = compressed.json()["payload"]
         self.assertTrue(all(symbol in CJK_ALPHABET for symbol in payload))
         decoded = self.client.post("/api/decompress", json={"payload": payload, "mode": "auto"})
         self.assertEqual(decoded.status_code, 200)
-        self.assertEqual(decoded.json["url"], LONG_TAIL_URL)
+        self.assertEqual(decoded.json()["url"], LONG_TAIL_URL)
 
 
 if __name__ == "__main__":

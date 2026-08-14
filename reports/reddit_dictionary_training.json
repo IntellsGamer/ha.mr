@@ -1,0 +1,416 @@
+{
+  "source": {
+    "database": "/home/ubuntu/reddit-links-dataset/test.db",
+    "split": "Training rows where id % 2 = 1; evaluation rows where id % 2 = 0",
+    "training_rows": 498996,
+    "urls_with_extractable_structure": 475498
+  },
+  "dictionary": {
+    "bytes": 27999,
+    "sha256": "7d74b09165cedc5316739cbb7fbe30b98aae8cdbdff2110291afa0b9464f7348",
+    "min_phrase_count": 12,
+    "phrase_count": 2607,
+    "top_phrases": [
+      {
+        "phrase": "/btc",
+        "count": 99
+      },
+      {
+        "phrase": "src=",
+        "count": 97
+      },
+      {
+        "phrase": "key=",
+        "count": 93
+      },
+      {
+        "phrase": "/biz",
+        "count": 92
+      },
+      {
+        "phrase": "run=",
+        "count": 90
+      },
+      {
+        "phrase": "spm=",
+        "count": 87
+      },
+      {
+        "phrase": "rev=",
+        "count": 81
+      },
+      {
+        "phrase": "tag=",
+        "count": 78
+      },
+      {
+        "phrase": "/DnD",
+        "count": 76
+      },
+      {
+        "phrase": "/PS4",
+        "count": 67
+      },
+      {
+        "phrase": "/236x",
+        "count": 67
+      },
+      {
+        "phrase": "/bill",
+        "count": 65
+      },
+      {
+        "phrase": "/dogs",
+        "count": 61
+      },
+      {
+        "phrase": "fit=",
+        "count": 60
+      },
+      {
+        "phrase": "qid=",
+        "count": 60
+      },
+      {
+        "phrase": "/2006",
+        "count": 59
+      },
+      {
+        "phrase": "rss=",
+        "count": 56
+      },
+      {
+        "phrase": "/ianp",
+        "count": 56
+      },
+      {
+        "phrase": "/cgi",
+        "count": 55
+      },
+      {
+        "phrase": "/food",
+        "count": 55
+      },
+      {
+        "phrase": "/poll",
+        "count": 55
+      },
+      {
+        "phrase": "/cms",
+        "count": 54
+      },
+      {
+        "phrase": "/Steam",
+        "count": 54
+      },
+      {
+        "phrase": "/en-gb",
+        "count": 54
+      },
+      {
+        "phrase": "movie=",
+        "count": 54
+      },
+      {
+        "phrase": "/2020",
+        "count": 53
+      },
+      {
+        "phrase": "/564x",
+        "count": 53
+      },
+      {
+        "phrase": "/team",
+        "count": 53
+      },
+      {
+        "phrase": "/1WL7J",
+        "count": 53
+      },
+      {
+        "phrase": "vid.me",
+        "count": 53
+      },
+      {
+        "phrase": "/guns",
+        "count": 52
+      },
+      {
+        "phrase": "/nhl",
+        "count": 51
+      },
+      {
+        "phrase": "/bills",
+        "count": 51
+      },
+      {
+        "phrase": "curid=",
+        "count": 51
+      },
+      {
+        "phrase": "qz.com",
+        "count": 51
+      },
+      {
+        "phrase": "/CFB",
+        "count": 50
+      },
+      {
+        "phrase": "/guide",
+        "count": 50
+      },
+      {
+        "phrase": "/serve",
+        "count": 50
+      },
+      {
+        "phrase": "/fs71",
+        "count": 49
+      },
+      {
+        "phrase": "/tags",
+        "count": 49
+      },
+      {
+        "phrase": "/xkcd",
+        "count": 49
+      },
+      {
+        "phrase": "date=",
+        "count": 49
+      },
+      {
+        "phrase": "/Games",
+        "count": 49
+      },
+      {
+        "phrase": "/diy",
+        "count": 48
+      },
+      {
+        "phrase": "/Vive",
+        "count": 48
+      },
+      {
+        "phrase": "itok=",
+        "count": 48
+      },
+      {
+        "phrase": "/rover",
+        "count": 48
+      },
+      {
+        "phrase": "site=",
+        "count": 47
+      },
+      {
+        "phrase": "/drive",
+        "count": 47
+      },
+      {
+        "phrase": "/embed",
+        "count": 47
+      },
+      {
+        "phrase": "/items",
+        "count": 47
+      },
+      {
+        "phrase": "/pin",
+        "count": 46
+      },
+      {
+        "phrase": "/esist",
+        "count": 46
+      },
+      {
+        "phrase": "/shows",
+        "count": 46
+      },
+      {
+        "phrase": "iso=",
+        "count": 45
+      },
+      {
+        "phrase": "/News",
+        "count": 45
+      },
+      {
+        "phrase": "/Loans",
+        "count": 45
+      },
+      {
+        "phrase": "/class",
+        "count": 45
+      },
+      {
+        "phrase": "/tf2",
+        "count": 44
+      },
+      {
+        "phrase": "/606c",
+        "count": 44
+      },
+      {
+        "phrase": "/text",
+        "count": 44
+      },
+      {
+        "phrase": "/report",
+        "count": 44
+      },
+      {
+        "phrase": "co.za",
+        "count": 43
+      },
+      {
+        "phrase": "/SLRep",
+        "count": 43
+      },
+      {
+        "phrase": "/match",
+        "count": 43
+      },
+      {
+        "phrase": "/travel",
+        "count": 43
+      },
+      {
+        "phrase": "/math",
+        "count": 42
+      },
+      {
+        "phrase": "skuId=",
+        "count": 42
+      },
+      {
+        "phrase": "width=",
+        "count": 42
+      },
+      {
+        "phrase": "/amazon",
+        "count": 42
+      },
+      {
+        "phrase": "/brasil",
+        "count": 42
+      },
+      {
+        "phrase": "itemid=",
+        "count": 42
+      },
+      {
+        "phrase": "/mp4",
+        "count": 41
+      },
+      {
+        "phrase": "/sch",
+        "count": 41
+      },
+      {
+        "phrase": "/tech",
+        "count": 41
+      },
+      {
+        "phrase": "show=",
+        "count": 41
+      },
+      {
+        "phrase": "view=",
+        "count": 41
+      },
+      {
+        "phrase": "/Smite",
+        "count": 41
+      },
+      {
+        "phrase": "query=",
+        "count": 41
+      },
+      {
+        "phrase": "/abs",
+        "count": 40
+      },
+      {
+        "phrase": "/RWBY",
+        "count": 40
+      },
+      {
+        "phrase": "/swtor",
+        "count": 40
+      },
+      {
+        "phrase": "/teams",
+        "count": 40
+      },
+      {
+        "phrase": "appid=",
+        "count": 40
+      },
+      {
+        "phrase": "/HUTrep",
+        "count": 40
+      },
+      {
+        "phrase": "tab=",
+        "count": 39
+      },
+      {
+        "phrase": "/deck",
+        "count": 39
+      },
+      {
+        "phrase": "/time",
+        "count": 39
+      },
+      {
+        "phrase": "/juice",
+        "count": 39
+      },
+      {
+        "phrase": "option=",
+        "count": 39
+      },
+      {
+        "phrase": "/daily",
+        "count": 38
+      },
+      {
+        "phrase": "/stream",
+        "count": 38
+      },
+      {
+        "phrase": "1339.cf",
+        "count": 38
+      },
+      {
+        "phrase": "/terms",
+        "count": 37
+      },
+      {
+        "phrase": "msk.su",
+        "count": 37
+      },
+      {
+        "phrase": "/france",
+        "count": 37
+      },
+      {
+        "phrase": "sid=",
+        "count": 36
+      },
+      {
+        "phrase": "fbid=",
+        "count": 36
+      },
+      {
+        "phrase": "fref=",
+        "count": 36
+      },
+      {
+        "phrase": "com.cn",
+        "count": 36
+      }
+    ]
+  }
+}

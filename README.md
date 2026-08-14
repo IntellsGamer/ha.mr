@@ -1,74 +1,84 @@
-# ha.mr — Flask edition
+# ha.mr — Python ASGI edition
 
-A **Python/Flask implementation** of ha.mr’s reversible URL compressor and QR-code optimiser. It retains the original format’s self-contained payload model: links are encoded and decoded without a redirect database.
+A **Python implementation** of ha.mr’s self-contained URL compressor. The project preserves the upstream V0 format, adds an adaptive V1 codec for difficult URLs, and does not use a redirect database: the destination is recovered from the payload itself.
 
-## What changed
+## Runtime architecture
 
-The runtime implementation is now Python. `ha_mr/codec.py` ports the `BigInt` packing, Huffman dictionaries, URL component encoding, ASCII output alphabet, emoji output alphabet, and QR-specific alphanumeric alphabet to Python integers and native data structures. `app.py` exposes the Flask UI, JSON APIs, QR image generation, and QR-path redirect handling.
+The web application is no longer a Flask/WSGI process. `app.py` is a **FastAPI ASGI** boundary that owns HTTP parsing, static assets, templates, and response assembly. It does not execute compression, decompression, or QR rendering on the asyncio event loop. Those CPU-bound operations are pure, pickle-safe functions in `ha_mr/service.py`, dispatched through a bounded spawned process pool.
 
-| Concern | Flask implementation |
+| Concern | Implementation |
 | --- | --- |
-| Web application | Flask with server-rendered Jinja templates |
-| Compression/decompression | `ha_mr.codec` — pure Python |
-| QR image rendering | Python `qrcode` package |
-| Text-link transport | `/#<payload>` |
-| QR-link transport | `/<QR-alphanumeric-payload>` |
+| HTTP runtime | FastAPI + Uvicorn ASGI |
+| Event-loop protection | Bounded `ProcessPoolExecutor` with spawned workers |
+| Codec | `ha_mr.codec` pure Python, no request or server state |
+| QR rendering | Worker-only `qrcode` rendering |
+| Back-pressure | Semaphore-bounded CPU queue; `HA_MR_CPU_QUEUE_LIMIT` |
+| Worker parallelism | `HA_MR_CPU_WORKERS`, defaulting to at most four processes |
 | Storage | None; payloads remain self-contained |
-| Existing payload compatibility | ASCII and QR codec formats match the upstream version-0 format |
+| Text links | `/#<payload>` resolved through a browser bridge |
+| QR links | `/<QR-alphanumeric-payload>` |
 
-The upstream browser implementation is retained under `legacy/browser-reference/` solely as provenance and a format-reference source. It is **not loaded or executed by the Flask application**. `tools/extract_codec_data.py` turns its published tables into the committed native Python table module `ha_mr/codec_data.py`.
+This split is deliberate: moving a CPU-bound codec into an `async def` alone does not make it non-blocking. The ASGI event loop remains responsive while process workers execute codec or QR work. The pure codec is also usable directly without importing FastAPI or starting a server.
+
+The retained browser implementation under `legacy/browser-reference/` is format provenance only. It is not loaded at runtime. `tools/extract_codec_data.py` turns its published tables into `ha_mr/codec_data.py`.
 
 ## Run locally
-
-Create a virtual environment if desired, install dependencies, and start Flask:
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-python app.py
+uvicorn asgi:app --host 0.0.0.0 --port 5000
 ```
 
 Then open `http://127.0.0.1:5000`.
 
 ## Adaptive V1 codec
 
-The encoder now evaluates multiple reversible representations and emits the **shortest visible payload** for the selected transport. It keeps the original structural V0 codec as a candidate because it is exceptionally effective for common domains and short paths. It also adds V1 raw-DEFLATE and static-dictionary-DEFLATE candidates for long, nested, query-heavy, opaque, and legacy-unsupported URLs.
+For the selected output transport, the encoder emits the shortest valid candidate among the original structural V0 codec, V1 raw DEFLATE, and V1 static-dictionary DEFLATE. V0 remains the best representation for most familiar shared links; V1 handles long, opaque, nested, query-heavy, and V0-unsupported URLs.
 
-Text output can use the following alphabets from the page selector or API. **ASCII** is the interoperable default. **Emoji** uses a prefix-safe one-code-point V1 transport; the existing rich emoji alphabet continues to decode older V0 links. **Japanese/CJK** uses 4,096 one-code-point digits for the densest visible text output, but strict URL serialisers will typically percent-encode it. QR uses its dedicated restricted alphabet and remains QR-compatible.
+The V1 static dictionary is trained reproducibly from the **odd-ID half** of the one-million-row Reddit outbound-links sample. It learns only repeated safe link structure—protocol fragments, hosts, short path prefixes, and query keys—and excludes fragments, query values, and one-off identifiers. Evaluation uses a deterministic subset of the disjoint even-ID half. The runtime contains only the frozen dictionary, never the source database.
 
-Existing V0 payloads remain valid. V1 payloads are self-identifying through the packed-number framing; emoji V1 adds a dedicated display marker before its safe high-radix body. The detailed design and real-corpus experiment are in [`docs/adaptive_v1_design.md`](docs/adaptive_v1_design.md).
+| Transport | Use | Trade-off |
+| --- | --- | --- |
+| ASCII | Default interoperable payload | Lowest visible-symbol density |
+| Emoji | Dense display transport | V1 uses a safe one-code-point alphabet; URI serializers may expand it |
+| Japanese/CJK | Densest visible text transport | Often percent-encoded by strict URL-only channels |
+| QR | QR-compatible alphanumeric transport | Restricted alphabet by design |
+
+V0 payloads stay valid. V1 is self-identifying through packed-number framing; emoji V1 additionally uses a dedicated marker before its prefix-safe body.
 
 ## API
 
-`POST /api/compress` accepts JSON with `url` and an optional `mode` of `ascii`, `emoji`, `cjk`, or `qr`.
+`POST /api/compress` accepts `url` and optional `mode` (`ascii`, `emoji`, `cjk`, or `qr`). `POST /api/decompress` accepts a `payload` and optional `mode` (`auto`, `ascii`, `emoji`, `cjk`, or `qr`). `POST /api/qr` returns a QR path payload plus PNG data URL. `GET /healthz` reports the ASGI runtime and worker-pool configuration.
 
 ```json
 {"url":"https://example.com/docs/guide?ref=ha#intro","mode":"qr"}
 ```
 
-`POST /api/decompress` accepts `payload` and optional `mode` (`auto`, `ascii`, `emoji`, or `qr`). `GET /healthz` returns a small readiness response.
+## Benchmarks and tests
 
-## Test
+Run all regression tests:
 
 ```bash
 python3 -m unittest -v tests/test_app.py tests/test_adaptive.py
 ```
 
-The suite checks codec round trips, a payload captured from the original public deployment, QR-alphabet output, Flask APIs, server-side QR PNG generation, and redirect resolution.
-
-## Regenerate codec tables
-
-If intentionally updating the retained upstream reference implementation, regenerate the native Python dictionaries and re-run the test suite:
+Download the Git-LFS-tracked Reddit database before reproducing the corpus work:
 
 ```bash
-python3 tools/extract_codec_data.py
-python3 -m unittest -v tests/test_app.py tests/test_adaptive.py
+git lfs pull  # in a clone of smythp/reddit_links_dataset
+python3 tools/build_reddit_dictionary.py
+python3 tools/embed_static_dictionary.py
+python3 tools/benchmark_reddit_adaptive.py
+python3 tools/benchmark_asgi_concurrency.py
 ```
+
+The provenance and results files under `reports/` intentionally store aggregate metadata and measurements, not individual shared links.
 
 ## Deployment
 
-Deploy as a normal WSGI application using the module-level `app` object. Set `PORT` to override the default `5000` when invoking `python app.py`. For production, place it behind a WSGI server and reverse proxy, and make sure the proxy forwards arbitrary path payloads to Flask so QR redirects resolve.
+Deploy `asgi:app` with an ASGI server such as Uvicorn or an ASGI worker class behind a reverse proxy. Do not use a WSGI worker. The proxy must forward arbitrary path payloads to the application so QR redirects resolve. Set `HA_MR_CPU_WORKERS`, `HA_MR_CPU_QUEUE_LIMIT`, `HA_MR_MAX_INPUT_CHARS`, and the ASGI server worker count according to available CPU and desired per-instance concurrency.
 
 ## License
 

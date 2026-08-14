@@ -1,0 +1,26 @@
+{
+  "database": "/home/ubuntu/reddit-links-dataset/test.db",
+  "corpus_size": 2000,
+  "measurements": [
+    {
+      "label": "codec_round_trips",
+      "seconds": 3.9255377439999393,
+      "peak_bytes": 857470,
+      "result_count": 2000
+    },
+    {
+      "label": "qr_rendering",
+      "seconds": 0.9228696879999916,
+      "peak_bytes": 5040604,
+      "result_count": 50
+    }
+  ],
+  "per_item": {
+    "codec_round_trips": {
+      "milliseconds": 1.9627688719999699
+    },
+    "qr_rendering": {
+      "milliseconds": 18.45739375999983
+    }
+  }
+}

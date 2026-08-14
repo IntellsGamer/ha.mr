@@ -1,134 +1,142 @@
-"""Flask entry point for the Python ha.mr implementation."""
+"""ASGI entry point for ha.mr.
+
+The application only handles HTTP, rendering, and response assembly. Compression,
+decoding, and QR work run in a bounded process pool so they never block the
+asyncio event loop handling other requests.
+"""
 
 from __future__ import annotations
 
-import base64
-import io
+import asyncio
 import os
+from concurrent.futures import ProcessPoolExecutor
+from contextlib import asynccontextmanager
+from multiprocessing import get_context
+from pathlib import Path
+from typing import Any, Callable
 
-import qrcode
-from flask import Flask, Response, jsonify, redirect, render_template, request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
-from ha_mr.codec import (
-    CodecError,
-    QR_ALPHABET,
-    adaptive_alphabet,
-    compress_adaptive,
-    decompress_adaptive,
-    infer_alphabet,
-)
+from ha_mr.codec import CodecError
+from ha_mr.service import compress_payload, decode_payload, qr_result
 
-app = Flask(__name__)
-app.config["JSON_SORT_KEYS"] = False
-
-_ERROR_LEVELS = [
-    qrcode.constants.ERROR_CORRECT_L,
-    qrcode.constants.ERROR_CORRECT_M,
-    qrcode.constants.ERROR_CORRECT_Q,
-    qrcode.constants.ERROR_CORRECT_H,
-]
+ROOT = Path(__file__).resolve().parent
+MAX_INPUT_CHARS = int(os.environ.get("HA_MR_MAX_INPUT_CHARS", "65536"))
+CPU_WORKERS = max(1, int(os.environ.get("HA_MR_CPU_WORKERS", str(min(4, os.cpu_count() or 1)))))
+CPU_QUEUE_LIMIT = max(CPU_WORKERS, int(os.environ.get("HA_MR_CPU_QUEUE_LIMIT", str(CPU_WORKERS * 8))))
+CPU_POOL = ProcessPoolExecutor(max_workers=CPU_WORKERS, mp_context=get_context("spawn"))
+CPU_SLOTS = asyncio.Semaphore(CPU_QUEUE_LIMIT)
 
 
-def _base_url() -> str:
-    return request.url_root.rstrip("/")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    CPU_POOL.shutdown(wait=True, cancel_futures=True)
 
 
-def _make_qr_data_url(value: str, correction_level: int) -> str:
-    level = _ERROR_LEVELS[max(0, min(correction_level, len(_ERROR_LEVELS) - 1))]
-    code = qrcode.QRCode(error_correction=level, box_size=8, border=4)
-    code.add_data(value, optimize=0)
-    code.make(fit=True)
-    image = code.make_image(fill_color="black", back_color="white")
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
-    return f"data:image/png;base64,{encoded}"
+app = FastAPI(title="ha.mr", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
+templates = Jinja2Templates(directory=ROOT / "templates")
 
 
-def _decode_payload(payload: str, mode: str) -> str:
-    if mode not in {"auto", "ascii", "emoji", "cjk", "qr"}:
-        raise CodecError("mode must be one of: auto, ascii, emoji, cjk, qr")
-    alphabet = infer_alphabet(payload, qr=mode == "qr") if mode == "auto" else adaptive_alphabet(mode)
-    return decompress_adaptive(payload, alphabet)
+def _base_url(request: Request) -> str:
+    return str(request.base_url).rstrip("/")
 
 
-@app.get("/")
-def index() -> str:
-    """Serve the original ha.mr-style page; fragment resolution occurs in app.js."""
-    return render_template("index.html")
+def _text(value: Any, *, field: str) -> str:
+    if not isinstance(value, str):
+        raise HTTPException(status_code=422, detail=f"{field} must be a string")
+    value = value.strip()
+    if len(value) > MAX_INPUT_CHARS:
+        raise HTTPException(status_code=413, detail=f"{field} exceeds {MAX_INPUT_CHARS} characters")
+    return value
+
+
+async def _cpu(function: Callable[..., Any], *args: Any) -> Any:
+    """Run bounded CPU work outside the event loop and preserve codec errors."""
+    async with CPU_SLOTS:
+        loop = asyncio.get_running_loop()
+        try:
+            return await loop.run_in_executor(CPU_POOL, function, *args)
+        except CodecError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+async def _json(request: Request) -> dict[str, Any]:
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Request body must be JSON") from exc
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=422, detail="JSON body must be an object")
+    return body
+
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request) -> HTMLResponse:
+    """Serve the ha.mr-style page; fragments are resolved by the browser bridge."""
+    return templates.TemplateResponse(request=request, name="index.html")
 
 
 @app.post("/api/compress")
-def api_compress() -> Response:
-    body = request.get_json(silent=True) or {}
-    input_url = str(body.get("url", "")).strip()
+async def api_compress(request: Request) -> JSONResponse:
+    body = await _json(request)
+    url = _text(body.get("url", ""), field="url")
     mode = body.get("mode", "ascii")
-    if mode not in {"ascii", "emoji", "cjk", "qr"}:
-        return jsonify(error="mode must be one of: ascii, emoji, cjk, qr"), 400
-
-    alphabet = adaptive_alphabet(mode)
-    try:
-        payload = compress_adaptive(input_url, alphabet)
-    except CodecError as exc:
-        return jsonify(error=str(exc)), 400
-
-    link = f"{_base_url().upper()}/{payload}" if mode == "qr" else f"{_base_url()}#{payload}"
-    return jsonify(payload=payload, link=link, mode=mode)
+    if not isinstance(mode, str):
+        raise HTTPException(status_code=422, detail="mode must be a string")
+    payload = await _cpu(compress_payload, url, mode)
+    link = f"{_base_url(request).upper()}/{payload}" if mode == "qr" else f"{_base_url(request)}#{payload}"
+    return JSONResponse({"payload": payload, "link": link, "mode": mode})
 
 
 @app.post("/api/decompress")
-def api_decompress() -> Response:
-    body = request.get_json(silent=True) or {}
-    payload = str(body.get("payload", "")).strip()
+async def api_decompress(request: Request) -> JSONResponse:
+    body = await _json(request)
+    payload = _text(body.get("payload", ""), field="payload")
     mode = body.get("mode", "auto")
-    try:
-        return jsonify(url=_decode_payload(payload, mode))
-    except CodecError as exc:
-        return jsonify(error=str(exc)), 400
+    if not isinstance(mode, str):
+        raise HTTPException(status_code=422, detail="mode must be a string")
+    return JSONResponse({"url": await _cpu(decode_payload, payload, mode)})
 
 
 @app.get("/resolve")
-def resolve_fragment_payload() -> Response:
-    """Receive a hash payload from the browser bridge and redirect to its target."""
-    payload = request.args.get("payload", "").replace(" ", "")
-    try:
-        return redirect(_decode_payload(payload, "auto"), code=302)
-    except CodecError:
-        return Response("Unknown ha.mr payload", status=404, mimetype="text/plain")
+async def resolve_fragment_payload(request: Request, payload: str = "") -> RedirectResponse:
+    """Receive browser-only fragments through a query bridge and redirect once decoded."""
+    destination = await _cpu(decode_payload, _text(payload.replace(" ", ""), field="payload"), "auto")
+    return RedirectResponse(destination, status_code=302)
 
 
 @app.post("/api/qr")
-def api_qr() -> Response:
-    body = request.get_json(silent=True) or {}
-    input_url = str(body.get("url", "")).strip()
+async def api_qr(request: Request) -> JSONResponse:
+    body = await _json(request)
+    url = _text(body.get("url", ""), field="url")
     try:
         correction_level = int(body.get("correction_level", 1))
     except (TypeError, ValueError):
         correction_level = 1
-
-    try:
-        payload = compress_adaptive(input_url, QR_ALPHABET)
-    except CodecError as exc:
-        return jsonify(error=str(exc)), 400
-
-    link = f"{_base_url().upper()}/{payload}"
-    return jsonify(payload=payload, link=link, image=_make_qr_data_url(link, correction_level))
+    return JSONResponse(await _cpu(qr_result, url, _base_url(request), correction_level))
 
 
 @app.get("/healthz")
-def healthz() -> Response:
-    return jsonify(status="ok", codec="python")
+async def healthz() -> JSONResponse:
+    return JSONResponse({
+        "status": "ok",
+        "codec": "python",
+        "runtime": "asgi",
+        "cpu_workers": CPU_WORKERS,
+        "queue_limit": CPU_QUEUE_LIMIT,
+    })
 
 
-@app.get("/<path:payload>")
-def resolve_qr_payload(payload: str) -> Response:
-    """Decode a QR-mode path payload and perform the destination redirect."""
+@app.get("/{payload:path}", response_model=None)
+async def resolve_qr_payload(payload: str) -> RedirectResponse | PlainTextResponse:
+    """Decode QR-mode path payloads without creating server-side link state."""
     try:
-        destination = decompress_adaptive(payload, QR_ALPHABET)
-    except CodecError:
-        return Response("Unknown ha.mr payload", status=404, mimetype="text/plain")
-    return redirect(destination, code=302)
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=True)
+        destination = await _cpu(decode_payload, _text(payload, field="payload"), "qr")
+    except HTTPException:
+        return PlainTextResponse("Unknown ha.mr payload", status_code=404)
+    return RedirectResponse(destination, status_code=302)
